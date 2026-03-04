@@ -13,7 +13,7 @@ struct DictateFlowApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("DictateFlow") {
+        WindowGroup("DictateFlow", id: "main") {
             MainView()
                 .environmentObject(settingsStore)
                 .environmentObject(viewModel)
@@ -22,5 +22,15 @@ struct DictateFlowApp: App {
                 }
         }
         .defaultSize(width: 1100, height: 760)
+
+        MenuBarExtra {
+            MenuBarControlView()
+                .environmentObject(settingsStore)
+                .environmentObject(viewModel)
+        } label: {
+            // Gewünschtes Mikrowellen-/Radiowellen-Symbol in der Menüleiste.
+            Image(systemName: "dot.radiowaves.left.and.right")
+        }
+        .menuBarExtraStyle(.window)
     }
 }

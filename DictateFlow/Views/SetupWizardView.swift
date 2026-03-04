@@ -159,7 +159,18 @@ struct SetupWizardView: View {
     private var permissionsStep: some View {
         VStack(alignment: .leading, spacing: 12) {
             statusRow(title: "Mikrofon", ok: viewModel.isMicrophoneGranted, okText: "Freigegeben", missingText: "Nicht freigegeben")
-            statusRow(title: "Bedienungshilfen", ok: viewModel.isAccessibilityGranted, okText: "Freigegeben", missingText: "Nicht freigegeben")
+            statusRow(
+                title: "Bedienungshilfen",
+                ok: viewModel.isAccessibilityGranted || !viewModel.isAccessibilityRequired,
+                okText: viewModel.isAccessibilityRequired ? "Freigegeben" : "Optional",
+                missingText: "Nicht freigegeben"
+            )
+
+            if !viewModel.isAccessibilityRequired {
+                Text("Automatisches Einfügen ist deaktiviert, daher ist Bedienungshilfe optional.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             HStack(spacing: 10) {
                 Button("Mikrofon erlauben") {
@@ -172,7 +183,7 @@ struct SetupWizardView: View {
                     Task { await viewModel.requestAccessibilityPermission() }
                 }
                 .buttonStyle(.bordered)
-                .disabled(viewModel.isWorking)
+                .disabled(viewModel.isWorking || !viewModel.isAccessibilityRequired)
             }
 
             HStack(spacing: 10) {

@@ -4,9 +4,11 @@ import AppKit
 struct SettingsView: View {
     @EnvironmentObject private var settings: SettingsStore
     @EnvironmentObject private var appViewModel: AppViewModel
+
     @State private var binaryDetectFeedback = ""
     @State private var modelDetectFeedback = ""
     @State private var ollamaDetectFeedback = ""
+    @State private var launchAtLoginFeedback = ""
     @State private var showModelSelectionWindow = false
 
     var body: some View {
@@ -61,7 +63,6 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-
             }
 
             Section("Lokale KI (Ollama)") {
@@ -99,6 +100,89 @@ struct SettingsView: View {
                     ForEach(DictationMode.allCases) { mode in
                         Text(mode.displayName).tag(mode)
                     }
+                }
+            }
+
+            Section("Einfügen & Overlay") {
+                Toggle("Text automatisch einfügen", isOn: $settings.autoPasteEnabled)
+
+                Text("Wenn deaktiviert, wird der Text nur in die Zwischenablage kopiert.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Toggle("Overlay anzeigen (immer im Vordergrund)", isOn: $settings.showFloatingOverlay)
+
+                HStack {
+                    Button("Position zurücksetzen") {
+                        appViewModel.resetFloatingOverlayPosition()
+                    }
+                    .buttonStyle(.bordered)
+
+                    Spacer()
+
+                    if let origin = settings.overlayOriginPoint {
+                        Text("Aktuell: x \(Int(origin.x)), y \(Int(origin.y))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Section("Sprache") {
+                Picker("Transkriptionssprache", selection: $settings.primaryTranscriptionLanguage) {
+                    ForEach(TranscriptionLanguage.allCases) { language in
+                        Text(language.displayName).tag(language)
+                    }
+                }
+
+                DisclosureGroup("Zusätzliche Sprachen (Fallback)") {
+                    ForEach(
+                        TranscriptionLanguage.fallbackChoices.filter { $0 != settings.primaryTranscriptionLanguage },
+                        id: \.self
+                    ) { language in
+                        Toggle(language.displayName, isOn: fallbackBinding(for: language))
+                    }
+                }
+
+                Text("Wenn die primäre Sprache fehlschlägt, testet DictateFlow die Fallback-Sprachen in Reihenfolge.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Shortcut") {
+                Picker("Taste", selection: $settings.hotkeyKey) {
+                    ForEach(HotkeyKey.allCases) { key in
+                        Text(key.displayName).tag(key)
+                    }
+                }
+
+                HStack(spacing: 14) {
+                    Toggle("⌘", isOn: $settings.hotkeyUseCommand)
+                    Toggle("⇧", isOn: $settings.hotkeyUseShift)
+                    Toggle("⌥", isOn: $settings.hotkeyUseOption)
+                    Toggle("⌃", isOn: $settings.hotkeyUseControl)
+                }
+
+                Text("Aktuell: \(settings.hotkeyDisplayString())")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Toggle("Push-to-Talk", isOn: $settings.pushToTalkEnabled)
+
+                if settings.pushToTalkEnabled {
+                    Text("Halte den Shortcut gedrückt, während du sprichst.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section("System") {
+                Toggle("Bei Anmeldung starten", isOn: $settings.launchAtLoginEnabled)
+
+                if !launchAtLoginFeedback.isEmpty {
+                    Text(launchAtLoginFeedback)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -171,11 +255,55 @@ struct SettingsView: View {
         .onChange(of: settings.selectedSpeechModel) {
             appViewModel.selectedSpeechModel = settings.selectedSpeechModel
         }
+        .onChange(of: settings.showFloatingOverlay) {
+            appViewModel.applyFloatingOverlayVisibilitySetting()
+        }
+        .onChange(of: settings.hotkeyKey) {
+            appViewModel.reconfigureHotkeyFromSettings()
+        }
+        .onChange(of: settings.hotkeyUseCommand) {
+            handleHotkeyModifierChanged()
+        }
+        .onChange(of: settings.hotkeyUseShift) {
+            handleHotkeyModifierChanged()
+        }
+        .onChange(of: settings.hotkeyUseOption) {
+            handleHotkeyModifierChanged()
+        }
+        .onChange(of: settings.hotkeyUseControl) {
+            handleHotkeyModifierChanged()
+        }
+        .onChange(of: settings.pushToTalkEnabled) {
+            appViewModel.reconfigureHotkeyFromSettings()
+        }
+        .onChange(of: settings.launchAtLoginEnabled) {
+            Task {
+                await appViewModel.applyLaunchAtLoginSetting()
+                launchAtLoginFeedback = settings.launchAtLoginEnabled ?
+                    "Bei Anmeldung starten ist aktiv." :
+                    "Bei Anmeldung starten ist deaktiviert."
+            }
+        }
         .sheet(isPresented: $showModelSelectionWindow) {
             ModelSelectionView(selectedModel: $settings.selectedSpeechModel) {
                 showModelSelectionWindow = false
             }
         }
+    }
+
+    private func fallbackBinding(for language: TranscriptionLanguage) -> Binding<Bool> {
+        Binding(
+            get: {
+                settings.fallbackTranscriptionLanguages.contains(language)
+            },
+            set: { isEnabled in
+                if isEnabled {
+                    settings.fallbackTranscriptionLanguages.insert(language)
+                } else {
+                    settings.fallbackTranscriptionLanguages.remove(language)
+                }
+            }
+        )
     }
 
     private func chooseWhisperBinary() {
@@ -212,5 +340,10 @@ struct SettingsView: View {
         if panel.runModal() == .OK, let url = panel.url {
             settings.ollamaBinaryPath = url.path
         }
+    }
+
+    private func handleHotkeyModifierChanged() {
+        settings.ensureAtLeastOneHotkeyModifier()
+        appViewModel.reconfigureHotkeyFromSettings()
     }
 }

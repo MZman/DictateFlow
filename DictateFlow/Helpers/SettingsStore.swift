@@ -1,4 +1,6 @@
 import Foundation
+import CoreGraphics
+import Carbon
 
 enum AppDefaults {
     static let promptTemplate = """
@@ -27,6 +29,8 @@ Gib ausschließlich den finalen Text zurück.
 
 @MainActor
 final class SettingsStore: ObservableObject {
+    private var isSanitizingFallbackLanguages = false
+
     static func recommendedUserModelDirectory() -> String {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library", isDirectory: true)
@@ -47,6 +51,20 @@ final class SettingsStore: ObservableObject {
         static let promptStyle = "settings.promptStyle"
         static let customStyleInstruction = "settings.customStyleInstruction"
         static let promptTemplate = "settings.promptTemplate"
+        static let autoPasteEnabled = "settings.autoPasteEnabled"
+        static let showFloatingOverlay = "settings.showFloatingOverlay"
+        static let overlayOriginX = "settings.overlayOriginX"
+        static let overlayOriginY = "settings.overlayOriginY"
+        static let launchAtLoginEnabled = "settings.launchAtLoginEnabled"
+        static let primaryTranscriptionLanguage = "settings.primaryTranscriptionLanguage"
+        static let fallbackTranscriptionLanguages = "settings.fallbackTranscriptionLanguages"
+        static let hotkeyKey = "settings.hotkeyKey"
+        static let hotkeyUseCommand = "settings.hotkeyUseCommand"
+        static let hotkeyUseShift = "settings.hotkeyUseShift"
+        static let hotkeyUseOption = "settings.hotkeyUseOption"
+        static let hotkeyUseControl = "settings.hotkeyUseControl"
+        static let pushToTalkEnabled = "settings.pushToTalkEnabled"
+        static let preferredInputDeviceUID = "settings.preferredInputDeviceUID"
 
         // Legacy keys
         static let legacyDefaultPrompt = "settings.defaultPrompt"
@@ -91,6 +109,81 @@ final class SettingsStore: ObservableObject {
         didSet { defaults.set(promptTemplate, forKey: Keys.promptTemplate) }
     }
 
+    @Published var autoPasteEnabled: Bool {
+        didSet { defaults.set(autoPasteEnabled, forKey: Keys.autoPasteEnabled) }
+    }
+
+    @Published var showFloatingOverlay: Bool {
+        didSet { defaults.set(showFloatingOverlay, forKey: Keys.showFloatingOverlay) }
+    }
+
+    @Published var overlayOriginX: Double? {
+        didSet {
+            if let overlayOriginX {
+                defaults.set(overlayOriginX, forKey: Keys.overlayOriginX)
+            } else {
+                defaults.removeObject(forKey: Keys.overlayOriginX)
+            }
+        }
+    }
+
+    @Published var overlayOriginY: Double? {
+        didSet {
+            if let overlayOriginY {
+                defaults.set(overlayOriginY, forKey: Keys.overlayOriginY)
+            } else {
+                defaults.removeObject(forKey: Keys.overlayOriginY)
+            }
+        }
+    }
+
+    @Published var launchAtLoginEnabled: Bool {
+        didSet { defaults.set(launchAtLoginEnabled, forKey: Keys.launchAtLoginEnabled) }
+    }
+
+    @Published var primaryTranscriptionLanguage: TranscriptionLanguage {
+        didSet {
+            defaults.set(primaryTranscriptionLanguage.rawValue, forKey: Keys.primaryTranscriptionLanguage)
+            sanitizeFallbackLanguages()
+        }
+    }
+
+    @Published var fallbackTranscriptionLanguages: Set<TranscriptionLanguage> {
+        didSet {
+            sanitizeFallbackLanguages()
+            let values = fallbackTranscriptionLanguages.map(\.rawValue).sorted()
+            defaults.set(values, forKey: Keys.fallbackTranscriptionLanguages)
+        }
+    }
+
+    @Published var hotkeyKey: HotkeyKey {
+        didSet { defaults.set(hotkeyKey.rawValue, forKey: Keys.hotkeyKey) }
+    }
+
+    @Published var hotkeyUseCommand: Bool {
+        didSet { defaults.set(hotkeyUseCommand, forKey: Keys.hotkeyUseCommand) }
+    }
+
+    @Published var hotkeyUseShift: Bool {
+        didSet { defaults.set(hotkeyUseShift, forKey: Keys.hotkeyUseShift) }
+    }
+
+    @Published var hotkeyUseOption: Bool {
+        didSet { defaults.set(hotkeyUseOption, forKey: Keys.hotkeyUseOption) }
+    }
+
+    @Published var hotkeyUseControl: Bool {
+        didSet { defaults.set(hotkeyUseControl, forKey: Keys.hotkeyUseControl) }
+    }
+
+    @Published var pushToTalkEnabled: Bool {
+        didSet { defaults.set(pushToTalkEnabled, forKey: Keys.pushToTalkEnabled) }
+    }
+
+    @Published var preferredInputDeviceUID: String {
+        didSet { defaults.set(preferredInputDeviceUID, forKey: Keys.preferredInputDeviceUID) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
 
@@ -110,7 +203,7 @@ final class SettingsStore: ObservableObject {
         } else if defaults.object(forKey: Keys.legacyEnablePostProcessingByDefault) != nil {
             dictationMode = defaults.bool(forKey: Keys.legacyEnablePostProcessingByDefault) ? .aiPrompt : .plain
         } else {
-            dictationMode = .aiPrompt
+            dictationMode = .plain
         }
 
         if let storedPromptStyle = defaults.string(forKey: Keys.promptStyle), let parsedStyle = PromptStyle(rawValue: storedPromptStyle) {
@@ -123,6 +216,41 @@ final class SettingsStore: ObservableObject {
 
         let legacyPrompt = defaults.string(forKey: Keys.legacyDefaultPrompt)
         promptTemplate = defaults.string(forKey: Keys.promptTemplate) ?? legacyPrompt ?? AppDefaults.promptTemplate
+
+        autoPasteEnabled = defaults.object(forKey: Keys.autoPasteEnabled) as? Bool ?? true
+        showFloatingOverlay = defaults.object(forKey: Keys.showFloatingOverlay) as? Bool ?? false
+        overlayOriginX = defaults.object(forKey: Keys.overlayOriginX) as? Double
+        overlayOriginY = defaults.object(forKey: Keys.overlayOriginY) as? Double
+
+        if let storedPrimaryLanguage = defaults.string(forKey: Keys.primaryTranscriptionLanguage),
+           let parsedPrimaryLanguage = TranscriptionLanguage(rawValue: storedPrimaryLanguage) {
+            primaryTranscriptionLanguage = parsedPrimaryLanguage
+        } else {
+            primaryTranscriptionLanguage = .de
+        }
+
+        if let storedFallback = defaults.array(forKey: Keys.fallbackTranscriptionLanguages) as? [String] {
+            fallbackTranscriptionLanguages = Set(storedFallback.compactMap { TranscriptionLanguage(rawValue: $0) })
+        } else {
+            fallbackTranscriptionLanguages = []
+        }
+
+        if let storedHotkeyKey = defaults.string(forKey: Keys.hotkeyKey),
+           let parsedHotkeyKey = HotkeyKey(rawValue: storedHotkeyKey) {
+            hotkeyKey = parsedHotkeyKey
+        } else {
+            hotkeyKey = .d
+        }
+
+        hotkeyUseCommand = defaults.object(forKey: Keys.hotkeyUseCommand) as? Bool ?? true
+        hotkeyUseShift = defaults.object(forKey: Keys.hotkeyUseShift) as? Bool ?? true
+        hotkeyUseOption = defaults.object(forKey: Keys.hotkeyUseOption) as? Bool ?? false
+        hotkeyUseControl = defaults.object(forKey: Keys.hotkeyUseControl) as? Bool ?? false
+        pushToTalkEnabled = defaults.object(forKey: Keys.pushToTalkEnabled) as? Bool ?? false
+        preferredInputDeviceUID = defaults.string(forKey: Keys.preferredInputDeviceUID) ?? ""
+
+        let storedLaunchPreference = defaults.object(forKey: Keys.launchAtLoginEnabled) as? Bool
+        launchAtLoginEnabled = storedLaunchPreference ?? LaunchAtLoginManager.isEnabled()
 
         if let resolvedPath = WhisperService.resolveWhisperBinaryPath(preferredPath: whisperBinaryPath) {
             whisperBinaryPath = resolvedPath
@@ -144,6 +272,12 @@ final class SettingsStore: ObservableObject {
         if whisperModelDirectory == "/usr/local/share/whisper", !Self.isDirectoryWritable(whisperModelDirectory) {
             whisperModelDirectory = Self.recommendedUserModelDirectory()
         }
+
+        if !preferredInputDeviceUID.isEmpty, !AudioInputDeviceManager.containsDevice(uid: preferredInputDeviceUID) {
+            preferredInputDeviceUID = ""
+        }
+
+        sanitizeFallbackLanguages()
     }
 
     func resetPromptToDefault() {
@@ -180,6 +314,73 @@ final class SettingsStore: ObservableObject {
         }
 
         return rendered.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var overlayOriginPoint: CGPoint? {
+        guard let overlayOriginX, let overlayOriginY else { return nil }
+        return CGPoint(x: overlayOriginX, y: overlayOriginY)
+    }
+
+    func setOverlayOrigin(_ point: CGPoint?) {
+        overlayOriginX = point.map { Double($0.x) }
+        overlayOriginY = point.map { Double($0.y) }
+    }
+
+    func hotkeyModifierMask() -> UInt32 {
+        var mask: UInt32 = 0
+        if hotkeyUseCommand { mask |= UInt32(cmdKey) }
+        if hotkeyUseShift { mask |= UInt32(shiftKey) }
+        if hotkeyUseOption { mask |= UInt32(optionKey) }
+        if hotkeyUseControl { mask |= UInt32(controlKey) }
+        if mask == 0 {
+            mask = UInt32(cmdKey) | UInt32(shiftKey)
+        }
+        return mask
+    }
+
+    func hotkeyDisplayString() -> String {
+        let mask = hotkeyModifierMask()
+        var parts: [String] = []
+        if (mask & UInt32(controlKey)) != 0 { parts.append("⌃") }
+        if (mask & UInt32(optionKey)) != 0 { parts.append("⌥") }
+        if (mask & UInt32(shiftKey)) != 0 { parts.append("⇧") }
+        if (mask & UInt32(cmdKey)) != 0 { parts.append("⌘") }
+        parts.append(hotkeyKey.displayName)
+        return parts.joined()
+    }
+
+    func transcriptionLanguageCodes() -> [String] {
+        var result: [String] = []
+        result.append(primaryTranscriptionLanguage.rawValue)
+
+        let fallbackSorted = fallbackTranscriptionLanguages
+            .filter { $0 != .auto && $0 != primaryTranscriptionLanguage }
+            .sorted { $0.displayName < $1.displayName }
+
+        result.append(contentsOf: fallbackSorted.map(\.rawValue))
+
+        var seen = Set<String>()
+        return result.filter { seen.insert($0).inserted }
+    }
+
+    func ensureAtLeastOneHotkeyModifier() {
+        if !hotkeyUseCommand && !hotkeyUseShift && !hotkeyUseOption && !hotkeyUseControl {
+            hotkeyUseCommand = true
+        }
+    }
+
+    private func sanitizeFallbackLanguages() {
+        guard !isSanitizingFallbackLanguages else { return }
+        isSanitizingFallbackLanguages = true
+        defer { isSanitizingFallbackLanguages = false }
+
+        let sanitized = fallbackTranscriptionLanguages.filter {
+            $0 != .auto && $0 != primaryTranscriptionLanguage
+        }
+
+        if sanitized != fallbackTranscriptionLanguages {
+            fallbackTranscriptionLanguages = sanitized
+        }
     }
 
     @discardableResult

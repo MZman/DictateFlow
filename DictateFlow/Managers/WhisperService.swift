@@ -163,7 +163,7 @@ final class WhisperService {
         model: WhisperModel,
         binaryPath: String,
         modelDirectory: String,
-        language: String = "de"
+        languageCodes: [String] = ["de"]
     ) async throws -> String {
         guard let resolvedBinaryPath = Self.resolveWhisperBinaryPath(preferredPath: binaryPath) else {
             let triedPaths = ([binaryPath] + Self.commonBinaryPaths).joined(separator: ", ")
@@ -188,7 +188,7 @@ final class WhisperService {
             throw WhisperError.modelNotFound(
                 "Kein passendes Whisper-Modell gefunden. Gesucht: \(model.filename). " +
                 "Durchsucht: \(directoriesText). Gefunden: \(availableText). " +
-                "Lade ein Modell herunter (z. B. ggml-small.bin) oder nutze in den Einstellungen 'Modellordner automatisch finden' bzw. 'Small herunterladen'."
+                "Lade ein Modell über das LMM-Auswahlfenster herunter oder nutze in den Einstellungen 'Modellordner automatisch finden'."
             )
         }
 
@@ -201,31 +201,47 @@ final class WhisperService {
             )
         }
 
-        let arguments = [
-            "-m", resolvedModel.url.path,
-            "-f", audioURL.path,
-            "-l", language,
-            "--no-timestamps"
-        ]
+        let sanitizedCodes = normalizedLanguageCodes(languageCodes)
+        var attemptErrors: [String] = []
 
-        let result = try await ProcessRunner.run(
-            executablePath: resolvedBinaryPath,
-            arguments: arguments
-        )
+        for languageCode in sanitizedCodes {
+            var arguments = [
+                "-m", resolvedModel.url.path,
+                "-f", audioURL.path,
+                "--no-timestamps"
+            ]
 
-        guard result.exitCode == 0 else {
-            let detail = result.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
-            throw WhisperError.transcriptionFailed(detail.isEmpty ? "Exit Code \(result.exitCode)" : detail)
+            if languageCode.lowercased() != "auto" {
+                arguments += ["-l", languageCode]
+            }
+
+            let result = try await ProcessRunner.run(
+                executablePath: resolvedBinaryPath,
+                arguments: arguments
+            )
+
+            if result.exitCode != 0 {
+                let detail = result.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+                let reason = detail.isEmpty ? "Exit Code \(result.exitCode)" : detail
+                attemptErrors.append("[\(languageCode)] \(reason)")
+                continue
+            }
+
+            let candidate = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+            let cleaned = cleanWhisperOutput(candidate)
+
+            if !cleaned.isEmpty {
+                return cleaned
+            }
+
+            attemptErrors.append("[\(languageCode)] Leere Ausgabe")
         }
 
-        let candidate = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleaned = cleanWhisperOutput(candidate)
-
-        guard !cleaned.isEmpty else {
+        if attemptErrors.isEmpty {
             throw WhisperError.emptyResult
         }
 
-        return cleaned
+        throw WhisperError.transcriptionFailed(attemptErrors.joined(separator: " | "))
     }
 
     private func cleanWhisperOutput(_ output: String) -> String {
@@ -250,6 +266,20 @@ final class WhisperService {
         return joined
             .replacingOccurrences(of: #" {2,}"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func normalizedLanguageCodes(_ codes: [String]) -> [String] {
+        let cleaned = codes
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .filter { !$0.isEmpty }
+
+        var unique: [String] = []
+        var seen = Set<String>()
+        for code in cleaned where seen.insert(code).inserted {
+            unique.append(code)
+        }
+
+        return unique.isEmpty ? ["auto"] : unique
     }
 
     func downloadModel(_ model: WhisperModel, to directory: String) async throws -> URL {

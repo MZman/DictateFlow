@@ -14,6 +14,7 @@ final class HotkeyManager {
     }
 
     var onHotKeyPressed: (() -> Void)?
+    var onHotKeyReleased: (() -> Void)?
 
     private var hotKeyRef: EventHotKeyRef?
     private var handlerRef: EventHandlerRef?
@@ -29,30 +30,48 @@ final class HotkeyManager {
     func register(keyCode: UInt32, modifiers: UInt32) throws {
         unregister()
 
-        var eventSpec = EventTypeSpec(
-            eventClass: OSType(kEventClassKeyboard),
-            eventKind: UInt32(kEventHotKeyPressed)
-        )
+        var eventSpecs = [
+            EventTypeSpec(
+                eventClass: OSType(kEventClassKeyboard),
+                eventKind: UInt32(kEventHotKeyPressed)
+            ),
+            EventTypeSpec(
+                eventClass: OSType(kEventClassKeyboard),
+                eventKind: UInt32(kEventHotKeyReleased)
+            )
+        ]
 
         let selfPointer = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
 
-        let callback: EventHandlerUPP = { _, _, userData in
+        let callback: EventHandlerUPP = { _, eventRef, userData in
             guard let userData else { return noErr }
+            guard let eventRef else { return noErr }
             let manager = Unmanaged<HotkeyManager>.fromOpaque(userData).takeUnretainedValue()
+            let eventKind = GetEventKind(eventRef)
             DispatchQueue.main.async {
-                manager.onHotKeyPressed?()
+                switch eventKind {
+                case UInt32(kEventHotKeyPressed):
+                    manager.onHotKeyPressed?()
+                case UInt32(kEventHotKeyReleased):
+                    manager.onHotKeyReleased?()
+                default:
+                    break
+                }
             }
             return noErr
         }
 
-        let installStatus = InstallEventHandler(
-            GetEventDispatcherTarget(),
-            callback,
-            1,
-            &eventSpec,
-            selfPointer,
-            &handlerRef
-        )
+        let installStatus = eventSpecs.withUnsafeMutableBufferPointer { buffer -> OSStatus in
+            guard let baseAddress = buffer.baseAddress else { return -1 }
+            return InstallEventHandler(
+                GetEventDispatcherTarget(),
+                callback,
+                buffer.count,
+                baseAddress,
+                selfPointer,
+                &handlerRef
+            )
+        }
 
         guard installStatus == noErr else {
             throw HotkeyError.registrationFailed("InstallEventHandler fehlgeschlagen (\(installStatus)).")

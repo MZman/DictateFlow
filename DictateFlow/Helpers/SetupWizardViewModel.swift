@@ -85,10 +85,14 @@ final class SetupWizardViewModel: ObservableObject {
         case .tools:
             return isWhisperInstalled && isWhisperModelAvailable && isOllamaInstalled && isOllamaServerRunning
         case .permissions:
-            return isMicrophoneGranted && isAccessibilityGranted
+            return isMicrophoneGranted && (!isAccessibilityRequired || isAccessibilityGranted)
         case .complete:
             return true
         }
+    }
+
+    var isAccessibilityRequired: Bool {
+        settings.autoPasteEnabled
     }
 
     var isSetupComplete: Bool {
@@ -98,7 +102,7 @@ final class SetupWizardViewModel: ObservableObject {
             isOllamaInstalled &&
             isOllamaServerRunning &&
             isMicrophoneGranted &&
-            isAccessibilityGranted
+            (!isAccessibilityRequired || isAccessibilityGranted)
     }
 
     func nextStep() {
@@ -145,7 +149,7 @@ final class SetupWizardViewModel: ObservableObject {
         }
 
         isMicrophoneGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
-        isAccessibilityGranted = clipboardManager.hasAccessibilityPermission()
+        isAccessibilityGranted = isAccessibilityRequired ? clipboardManager.hasAccessibilityPermission() : true
     }
 
     func installHomebrew() async {
@@ -236,6 +240,12 @@ final class SetupWizardViewModel: ObservableObject {
     }
 
     func requestAccessibilityPermission() async {
+        if !isAccessibilityRequired {
+            appendLog("Bedienungshilfe ist optional, weil automatisches Einfügen deaktiviert ist.")
+            await refreshAll()
+            return
+        }
+
         await runTask("Bedienungshilfe-Berechtigung wird angefragt…") {
             let granted = await clipboardManager.requestAccessibilityPermissionAndWait(
                 prompt: true,

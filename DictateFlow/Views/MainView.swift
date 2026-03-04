@@ -36,9 +36,12 @@ struct MainView: View {
                 .tag(Tab.settings)
         }
         .overlay(alignment: .top) {
-            OverlayView(status: viewModel.status, message: viewModel.statusMessage)
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
+            if shouldShowTopStatusBanner {
+                OverlayView(status: viewModel.status, message: viewModel.statusMessage)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
         .alert(item: $viewModel.alertItem) { item in
             Alert(
@@ -68,7 +71,17 @@ struct MainView: View {
         .onChange(of: settings.whisperBinaryPath) {
             refreshModelAvailability()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .dictateFlowOpenRecorderTab)) { _ in
+            selectedTab = .recorder
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .dictateFlowOpenSettingsTab)) { _ in
+            selectedTab = .settings
+        }
         .frame(minWidth: 980, minHeight: 640)
+    }
+
+    private var shouldShowTopStatusBanner: Bool {
+        viewModel.isRecording || viewModel.isBusy || viewModel.status == .failed
     }
 
     private var recorderView: some View {
@@ -81,7 +94,7 @@ struct MainView: View {
 
                     Spacer()
 
-                    Text("Hotkey: ⌘⇧D")
+                    Text("Hotkey: \(settings.hotkeyDisplayString())")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

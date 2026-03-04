@@ -6,6 +6,8 @@ final class AudioRecorder: NSObject {
         case microphonePermissionDenied
         case cannotCreateRecorder
         case cannotStartRecording
+        case inputDeviceNotFound
+        case inputDeviceSelectionFailed(String)
 
         var errorDescription: String? {
             switch self {
@@ -15,12 +17,17 @@ final class AudioRecorder: NSObject {
                 return "Audioaufnahme konnte nicht initialisiert werden."
             case .cannotStartRecording:
                 return "Audioaufnahme konnte nicht gestartet werden."
+            case .inputDeviceNotFound:
+                return "Das ausgewählte Mikrofon wurde nicht gefunden. Bitte wähle ein verfügbares Eingabegerät."
+            case let .inputDeviceSelectionFailed(details):
+                return "Das ausgewählte Mikrofon konnte nicht aktiviert werden: \(details)"
             }
         }
     }
 
     private var recorder: AVAudioRecorder?
     private(set) var currentFileURL: URL?
+    private var previousDefaultInputDeviceID: UInt32?
 
     func requestPermissionIfNeeded() async -> Bool {
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
@@ -39,7 +46,16 @@ final class AudioRecorder: NSObject {
         }
     }
 
-    func startRecording() throws -> URL {
+    func startRecording(preferredInputDeviceUID: String?) throws -> URL {
+        do {
+            try switchInputDeviceIfNeeded(preferredInputDeviceUID: preferredInputDeviceUID)
+        } catch {
+            if let recorderError = error as? RecorderError {
+                throw recorderError
+            }
+            throw RecorderError.inputDeviceSelectionFailed(error.localizedDescription)
+        }
+
         let directory = try recordingsDirectory()
         let filename = "recording-\(Int(Date().timeIntervalSince1970)).wav"
         let fileURL = directory.appendingPathComponent(filename)
@@ -54,23 +70,77 @@ final class AudioRecorder: NSObject {
             AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
         ]
 
-        let newRecorder = try AVAudioRecorder(url: fileURL, settings: settings)
-        newRecorder.prepareToRecord()
+        do {
+            let newRecorder = try AVAudioRecorder(url: fileURL, settings: settings)
+            newRecorder.isMeteringEnabled = true
+            newRecorder.prepareToRecord()
 
-        guard newRecorder.record() else {
-            throw RecorderError.cannotStartRecording
+            guard newRecorder.record() else {
+                throw RecorderError.cannotStartRecording
+            }
+
+            recorder = newRecorder
+            currentFileURL = fileURL
+            return fileURL
+        } catch {
+            restoreDefaultInputDeviceIfNeeded()
+            throw error
         }
-
-        recorder = newRecorder
-        currentFileURL = fileURL
-
-        return fileURL
     }
 
     func stopRecording() -> URL? {
         recorder?.stop()
         recorder = nil
-        return currentFileURL
+        let finishedURL = currentFileURL
+        currentFileURL = nil
+        restoreDefaultInputDeviceIfNeeded()
+        return finishedURL
+    }
+
+    func cancelRecording() {
+        recorder?.stop()
+        recorder = nil
+
+        if let currentFileURL {
+            try? FileManager.default.removeItem(at: currentFileURL)
+        }
+        self.currentFileURL = nil
+        restoreDefaultInputDeviceIfNeeded()
+    }
+
+    private func switchInputDeviceIfNeeded(preferredInputDeviceUID: String?) throws {
+        previousDefaultInputDeviceID = nil
+
+        let trimmedUID = preferredInputDeviceUID?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        guard !trimmedUID.isEmpty else {
+            return
+        }
+
+        guard let requestedDeviceID = AudioInputDeviceManager.deviceID(forUID: trimmedUID) else {
+            throw RecorderError.inputDeviceNotFound
+        }
+
+        let currentDefault = try AudioInputDeviceManager.defaultInputDeviceID()
+        guard currentDefault != requestedDeviceID else {
+            return
+        }
+
+        do {
+            try AudioInputDeviceManager.setDefaultInputDevice(id: requestedDeviceID)
+            previousDefaultInputDeviceID = currentDefault
+        } catch {
+            throw RecorderError.inputDeviceSelectionFailed(
+                (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            )
+        }
+    }
+
+    private func restoreDefaultInputDeviceIfNeeded() {
+        guard let previousDefaultInputDeviceID else { return }
+        defer { self.previousDefaultInputDeviceID = nil }
+        try? AudioInputDeviceManager.setDefaultInputDevice(id: previousDefaultInputDeviceID)
     }
 
     private func recordingsDirectory() throws -> URL {
@@ -88,5 +158,15 @@ final class AudioRecorder: NSObject {
 
         try fileManager.createDirectory(at: recordingsFolder, withIntermediateDirectories: true)
         return recordingsFolder
+    }
+
+    func recordingLevel() -> Double {
+        guard let recorder, recorder.isRecording else { return 0 }
+        recorder.updateMeters()
+
+        let averagePower = Double(recorder.averagePower(forChannel: 0))
+        let clampedPower = max(-60.0, min(0.0, averagePower))
+        let normalized = (clampedPower + 60.0) / 60.0
+        return normalized
     }
 }

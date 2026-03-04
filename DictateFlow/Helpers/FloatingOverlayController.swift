@@ -14,6 +14,8 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
     private let screenInset: CGFloat = 10
 
     private var isRecording = false
+    private var overlayMovableEnabled = false
+    private var pinnedOrigin: CGPoint?
     private var status: AppStatus = .ready
     private var audioLevel: Double = 0
     private var isApplyingFrameConstraint = false
@@ -24,7 +26,23 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
         isRecording ? recordingSize : idleSize
     }
 
-    func setVisible(_ isVisible: Bool, preferredOrigin: CGPoint?) {
+    func setVisible(_ isVisible: Bool, preferredOrigin: CGPoint?, movable: Bool) {
+        let modeChanged = overlayMovableEnabled != movable
+        overlayMovableEnabled = movable
+
+        if overlayMovableEnabled {
+            pinnedOrigin = nil
+        } else {
+            if let panel {
+                let constrained = constrainedFrame(panel.frame, preferredScreen: panel.screen ?? screenForFrame(panel.frame))
+                pinnedOrigin = constrained.origin
+            } else if modeChanged || pinnedOrigin == nil {
+                pinnedOrigin = preferredOrigin ?? defaultOrigin()
+            } else if let preferredOrigin {
+                pinnedOrigin = preferredOrigin
+            }
+        }
+
         if isVisible {
             show(preferredOrigin: preferredOrigin)
         } else {
@@ -42,7 +60,7 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
         renderState.isRecording = isRecording
         renderState.audioLevel = self.audioLevel
 
-        panel?.isMovableByWindowBackground = !isRecording
+        panel?.isMovableByWindowBackground = overlayMovableEnabled && !isRecording
 
         if previousRecordingState != isRecording {
             resizePanelForCurrentState()
@@ -52,6 +70,7 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
     @discardableResult
     func resetPositionToDefault() -> CGPoint {
         let origin = defaultOrigin()
+        pinnedOrigin = origin
         ensurePanel(preferredOrigin: origin)
         guard let panel else {
             onPositionChanged?(origin)
@@ -70,12 +89,19 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
 
     private func show(preferredOrigin: CGPoint?) {
         ensurePanel(preferredOrigin: preferredOrigin)
+        enforcePinnedPositionIfNeeded()
         panel?.orderFrontRegardless()
     }
 
     private func ensurePanel(preferredOrigin: CGPoint?) {
         if panel == nil {
-            let origin = preferredOrigin ?? defaultOrigin()
+            let origin: CGPoint
+            if overlayMovableEnabled {
+                origin = preferredOrigin ?? defaultOrigin()
+            } else {
+                origin = pinnedOrigin ?? preferredOrigin ?? defaultOrigin()
+                pinnedOrigin = origin
+            }
             let initialFrame = NSRect(origin: origin, size: currentPanelSize)
             let frame = constrainedFrame(
                 initialFrame,
@@ -96,7 +122,7 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
             newPanel.isOpaque = false
             newPanel.hasShadow = true
             newPanel.hidesOnDeactivate = false
-            newPanel.isMovableByWindowBackground = !isRecording
+            newPanel.isMovableByWindowBackground = overlayMovableEnabled && !isRecording
             newPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
             newPanel.delegate = self
             newPanel.ignoresMouseEvents = false
@@ -111,11 +137,14 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
             )
 
             panel = newPanel
-        } else if let preferredOrigin {
+        } else if overlayMovableEnabled, let preferredOrigin {
             guard let panel else { return }
             let candidate = NSRect(origin: preferredOrigin, size: panel.frame.size)
             let constrained = constrainedFrame(candidate, preferredScreen: screenForFrame(candidate))
             panel.setFrameOrigin(constrained.origin)
+            pinnedOrigin = nil
+        } else {
+            enforcePinnedPositionIfNeeded()
         }
     }
 
@@ -125,7 +154,8 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
         let targetSize = currentPanelSize
         guard oldFrame.size != targetSize else { return }
 
-        // Behalte die obere rechte Ecke stabil, damit die rechte Aktionsseite sichtbar bleibt.
+        // Behalte die obere rechte Ecke stabil, damit die Position beim Wechsel
+        // zwischen Idle und Aufnahme erhalten bleibt.
         let candidate = NSRect(
             x: oldFrame.maxX - targetSize.width,
             y: oldFrame.maxY - targetSize.height,
@@ -135,6 +165,9 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
 
         let constrained = constrainedFrame(candidate, preferredScreen: panel.screen ?? screenForFrame(oldFrame))
         panel.setFrame(constrained, display: true, animate: true)
+        if !overlayMovableEnabled {
+            pinnedOrigin = constrained.origin
+        }
         onPositionChanged?(constrained.origin)
     }
 
@@ -151,6 +184,12 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
     func windowDidMove(_ notification: Notification) {
         guard let panel else { return }
         guard !isApplyingFrameConstraint else {
+            onPositionChanged?(panel.frame.origin)
+            return
+        }
+
+        if !overlayMovableEnabled {
+            enforcePinnedPositionIfNeeded()
             onPositionChanged?(panel.frame.origin)
             return
         }
@@ -204,6 +243,23 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
         let dx = lhs.x - rhs.x
         let dy = lhs.y - rhs.y
         return sqrt(dx * dx + dy * dy)
+    }
+
+    private func enforcePinnedPositionIfNeeded() {
+        guard !overlayMovableEnabled, let panel else { return }
+
+        let fixedOrigin = pinnedOrigin ?? panel.frame.origin
+        let pinnedFrame = NSRect(origin: fixedOrigin, size: panel.frame.size)
+        let constrained = constrainedFrame(pinnedFrame, preferredScreen: panel.screen ?? screenForFrame(panel.frame))
+
+        if distanceBetween(panel.frame.origin, constrained.origin) <= 0.5 {
+            return
+        }
+
+        isApplyingFrameConstraint = true
+        panel.setFrameOrigin(constrained.origin)
+        isApplyingFrameConstraint = false
+        pinnedOrigin = constrained.origin
     }
 }
 

@@ -14,7 +14,7 @@ settings:
     INFOPLIST_FILE: DictateFlow/Resources/Info.plist
     MACOSX_DEPLOYMENT_TARGET: 14.0
     ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
-    ASSETCATALOG_COMPILER_APPICON_NAME: ""
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     ENABLE_HARDENED_RUNTIME: YES
 targets:
   DictateFlow:
@@ -27,8 +27,10 @@ targets:
       - path: DictateFlow/Models
       - path: DictateFlow/Managers
       - path: DictateFlow/Helpers
-    resources:
       - path: DictateFlow/Resources
+        excludes:
+          - Info.plist
+        buildPhase: resources
     settings:
       base:
         PRODUCT_NAME: DictateFlow

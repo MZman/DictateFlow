@@ -15,7 +15,7 @@ final class AppViewModel: ObservableObject {
     @Published var isRecording = false
     @Published var isBusy = false
 
-    @Published var selectedProfile: Profile = .email
+    @Published var selectedProfile: Profile = .reminders
     @Published var dictationMode: DictationMode
     @Published var selectedSpeechModel: SpeechModelOption
 
@@ -64,7 +64,10 @@ final class AppViewModel: ObservableObject {
         }
 
         floatingOverlayController.onPositionChanged = { [weak self] origin in
-            self?.settings.setOverlayOrigin(origin)
+            guard let self else { return }
+            if self.settings.overlayMovable {
+                self.settings.setOverlayOrigin(origin)
+            }
         }
     }
 
@@ -199,7 +202,8 @@ final class AppViewModel: ObservableObject {
     func applyFloatingOverlayVisibilitySetting() {
         floatingOverlayController.setVisible(
             settings.showFloatingOverlay,
-            preferredOrigin: settings.overlayOriginPoint
+            preferredOrigin: settings.overlayOriginPoint,
+            movable: settings.overlayMovable
         )
         refreshFloatingOverlayState()
     }

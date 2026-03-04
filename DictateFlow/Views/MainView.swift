@@ -85,127 +85,195 @@ struct MainView: View {
     }
 
     private var recorderView: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            GroupBox("Status") {
-                HStack(spacing: 12) {
-                    Label(viewModel.status.label, systemImage: viewModel.status.iconName)
-                        .font(.headline)
-                        .foregroundStyle(viewModel.status.bannerColor)
-
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Aufnahme")
+                            .font(.title2.weight(.semibold))
+                        Text("Lokales Diktat mit optionaler KI-Nachbearbeitung.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                     Spacer()
-
-                    Text("Hotkey: \(settings.hotkeyDisplayString())")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if viewModel.isBusy {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
                 }
-                .padding(8)
-            }
 
-            GroupBox("Aufnahme") {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 10) {
-                        Button {
-                            Task { await viewModel.startRecording() }
-                        } label: {
-                            Label("Start", systemImage: "record.circle")
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(viewModel.isRecording || viewModel.isBusy)
+                card(title: "Status") {
+                    HStack(spacing: 12) {
+                        Label(viewModel.status.label, systemImage: viewModel.status.iconName)
+                            .font(.headline)
+                            .foregroundStyle(viewModel.status.bannerColor)
 
-                        Button {
-                            Task { await viewModel.stopRecording() }
-                        } label: {
-                            Label("Stopp", systemImage: "stop.circle")
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(!viewModel.isRecording)
-                    }
+                        Spacer()
 
-                    HStack(spacing: 14) {
-                        Picker("LMM-Modell", selection: $viewModel.selectedSpeechModel) {
-                            ForEach(SpeechModelOption.allCases) { model in
-                                Text(isSpeechModelAvailable(model) ? model.displayName : "\(model.displayName) (nicht installiert)")
-                                    .tag(model)
-                                    .disabled(!isSpeechModelAvailable(model))
-                            }
-                        }
-                        .frame(width: 280)
-
-                        Picker("Modus", selection: $viewModel.dictationMode) {
-                            ForEach(DictationMode.allCases) { mode in
-                                Text(mode.displayName).tag(mode)
-                            }
-                        }
-                        .frame(width: 280)
-                    }
-
-                    Picker("Prompt-Stil", selection: $settings.promptStyle) {
-                        ForEach(PromptStyle.allCases) { style in
-                            Text(style.displayName).tag(style)
-                        }
-                    }
-                    .frame(width: 360)
-
-                    if viewModel.dictationMode == .plain {
-                        Text("Prompt-Stil wird bei 'Reines Diktat' nicht angewendet.")
+                        Text("Hotkey: \(settings.hotkeyDisplayString())")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-
-                    Text(viewModel.dictationMode.descriptionText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Picker("Profil", selection: $viewModel.selectedProfile) {
-                        ForEach(Profile.allCases) { profile in
-                            Text(profile.displayName).tag(profile)
-                        }
-                    }
-                    .frame(width: 360)
                 }
-                .padding(8)
-            }
 
-            GroupBox("Letzte Transkriptionen") {
-                List {
-                    if viewModel.history.isEmpty {
-                        Text("Noch keine Transkriptionen vorhanden.")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(Array(viewModel.history.prefix(10))) { item in
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Label(item.profile.displayName, systemImage: item.profile.systemImage)
-                                        .font(.subheadline.weight(.semibold))
-                                    Spacer()
-                                    Text(item.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                Text(item.displayText)
-                                    .lineLimit(2)
-                                    .foregroundStyle(.secondary)
+                card(title: "Diktieren") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 8) {
+                            Button {
+                                Task { await viewModel.startRecording() }
+                            } label: {
+                                Label("Start", systemImage: "record.circle")
+                                    .frame(minWidth: 92)
                             }
-                            .contextMenu {
-                                Button("Kopieren") {
-                                    viewModel.copyText(item.displayText)
+                            .buttonStyle(.borderedProminent)
+                            .disabled(viewModel.isRecording || viewModel.isBusy)
+
+                            Button {
+                                Task { await viewModel.stopRecording() }
+                            } label: {
+                                Label("Stopp", systemImage: "stop.circle")
+                                    .frame(minWidth: 92)
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(!viewModel.isRecording)
+                        }
+
+                        Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 10) {
+                            GridRow {
+                                Text("Profil")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Picker("Profil", selection: $viewModel.selectedProfile) {
+                                    ForEach(Profile.allCases) { profile in
+                                        Text(profile.displayName).tag(profile)
+                                    }
                                 }
-                                Button("Löschen", role: .destructive) {
-                                    Task {
-                                        await viewModel.deleteTranscription(item)
+                                .labelsHidden()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+
+                            GridRow {
+                                Text("Modus")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Picker("Modus", selection: $viewModel.dictationMode) {
+                                    ForEach(DictationMode.allCases) { mode in
+                                        Text(mode.displayName).tag(mode)
+                                    }
+                                }
+                                .labelsHidden()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+
+                            GridRow {
+                                Text("LMM-Modell")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Picker("LMM-Modell", selection: $viewModel.selectedSpeechModel) {
+                                    ForEach(SpeechModelOption.allCases) { model in
+                                        Text(
+                                            isSpeechModelAvailable(model)
+                                            ? model.displayName
+                                            : "\(model.displayName) (nicht installiert)"
+                                        )
+                                        .tag(model)
+                                        .disabled(!isSpeechModelAvailable(model))
+                                    }
+                                }
+                                .labelsHidden()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+
+                            if viewModel.dictationMode == .aiPrompt {
+                                GridRow {
+                                    Text("Prompt-Stil")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Picker("Prompt-Stil", selection: $settings.promptStyle) {
+                                        ForEach(PromptStyle.allCases) { style in
+                                            Text(style.displayName).tag(style)
+                                        }
+                                    }
+                                    .labelsHidden()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
+                        }
+
+                        Text(viewModel.dictationMode.descriptionText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                card(title: "Letzte Transkriptionen") {
+                    if viewModel.history.isEmpty {
+                        ContentUnavailableView(
+                            "Noch keine Transkriptionen",
+                            systemImage: "text.bubble",
+                            description: Text("Starte eine Aufnahme, um den Verlauf zu füllen.")
+                        )
+                        .frame(maxWidth: .infinity, minHeight: 180)
+                    } else {
+                        VStack(spacing: 8) {
+                            ForEach(Array(viewModel.history.prefix(8))) { item in
+                                HStack(alignment: .top, spacing: 10) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack {
+                                            Label(item.profile.displayName, systemImage: item.profile.systemImage)
+                                                .font(.subheadline.weight(.semibold))
+                                            Spacer()
+                                            Text(item.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+
+                                        Text(item.displayText)
+                                            .lineLimit(2)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                    }
+
+                                    Button {
+                                        viewModel.copyText(item.displayText)
+                                    } label: {
+                                        Image(systemName: "doc.on.doc")
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .help("Kopieren")
+                                }
+                                .padding(10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .fill(Color.secondary.opacity(0.08))
+                                )
+                                .contextMenu {
+                                    Button("Kopieren") {
+                                        viewModel.copyText(item.displayText)
+                                    }
+                                    Button("Löschen", role: .destructive) {
+                                        Task {
+                                            await viewModel.deleteTranscription(item)
+                                        }
                                     }
                                 }
                             }
                         }
+
+                        HStack {
+                            Spacer()
+                            Button("Vollen Verlauf öffnen") {
+                                selectedTab = .history
+                            }
+                            .buttonStyle(.bordered)
+                        }
                     }
                 }
-                .frame(minHeight: 300)
             }
-
-            Spacer(minLength: 0)
+            .padding(18)
+            .frame(maxWidth: 980, alignment: .leading)
         }
-        .padding(16)
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 
     private func isSpeechModelAvailable(_ option: SpeechModelOption) -> Bool {
@@ -224,5 +292,23 @@ struct MainView: View {
            let firstAvailable = SpeechModelOption.allCases.first(where: { isSpeechModelAvailable($0) }) {
             viewModel.selectedSpeechModel = firstAvailable
         }
+    }
+
+    @ViewBuilder
+    private func card<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.headline)
+            content()
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.7))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+        )
     }
 }

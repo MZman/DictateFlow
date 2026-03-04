@@ -53,6 +53,7 @@ final class SettingsStore: ObservableObject {
         static let promptTemplate = "settings.promptTemplate"
         static let autoPasteEnabled = "settings.autoPasteEnabled"
         static let showFloatingOverlay = "settings.showFloatingOverlay"
+        static let overlayMovable = "settings.overlayMovable"
         static let overlayOriginX = "settings.overlayOriginX"
         static let overlayOriginY = "settings.overlayOriginY"
         static let launchAtLoginEnabled = "settings.launchAtLoginEnabled"
@@ -115,6 +116,10 @@ final class SettingsStore: ObservableObject {
 
     @Published var showFloatingOverlay: Bool {
         didSet { defaults.set(showFloatingOverlay, forKey: Keys.showFloatingOverlay) }
+    }
+
+    @Published var overlayMovable: Bool {
+        didSet { defaults.set(overlayMovable, forKey: Keys.overlayMovable) }
     }
 
     @Published var overlayOriginX: Double? {
@@ -219,6 +224,7 @@ final class SettingsStore: ObservableObject {
 
         autoPasteEnabled = defaults.object(forKey: Keys.autoPasteEnabled) as? Bool ?? true
         showFloatingOverlay = defaults.object(forKey: Keys.showFloatingOverlay) as? Bool ?? false
+        overlayMovable = defaults.object(forKey: Keys.overlayMovable) as? Bool ?? false
         overlayOriginX = defaults.object(forKey: Keys.overlayOriginX) as? Double
         overlayOriginY = defaults.object(forKey: Keys.overlayOriginY) as? Double
 

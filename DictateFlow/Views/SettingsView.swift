@@ -12,107 +12,122 @@ struct SettingsView: View {
     @State private var showModelSelectionWindow = false
 
     var body: some View {
-        Form {
-            Section("whisper.cpp") {
-                HStack {
-                    TextField("Pfad zu whisper-cli", text: $settings.whisperBinaryPath)
-                        .textFieldStyle(.roundedBorder)
-                    Button("Auswählen…") {
-                        chooseWhisperBinary()
-                    }
-                }
-
-                HStack(spacing: 10) {
-                    Button("Whisper automatisch finden") {
-                        if settings.autoDetectWhisperBinaryPath() {
-                            binaryDetectFeedback = "CLI gefunden: \(settings.whisperBinaryPath)"
-                        } else {
-                            binaryDetectFeedback = "Kein whisper-cli gefunden. Installiere whisper.cpp oder wähle die Datei manuell aus."
-                        }
-                    }
-                    .buttonStyle(.bordered)
-
-                    if !binaryDetectFeedback.isEmpty {
-                        Text(binaryDetectFeedback)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                HStack {
-                    TextField("Modellordner (ggml-*.bin)", text: $settings.whisperModelDirectory)
-                        .textFieldStyle(.roundedBorder)
-                    Button("Auswählen…") {
-                        chooseModelDirectory()
-                    }
-                }
-
-                HStack(spacing: 10) {
-                    Button("Modellordner automatisch finden") {
-                        if settings.autoDetectWhisperModelDirectory() {
-                            modelDetectFeedback = "Modellordner gefunden: \(settings.whisperModelDirectory)"
-                        } else {
-                            modelDetectFeedback = "Kein Modellordner mit ggml-*.bin gefunden. Lade z. B. ggml-small.bin herunter."
-                        }
-                    }
-                    .buttonStyle(.bordered)
-
-                    if !modelDetectFeedback.isEmpty {
-                        Text(modelDetectFeedback)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-
-            Section("Lokale KI (Ollama)") {
-                HStack {
-                    TextField("Pfad zu ollama", text: $settings.ollamaBinaryPath)
-                        .textFieldStyle(.roundedBorder)
-                    Button("Auswählen…") {
-                        chooseOllamaBinary()
-                    }
-                }
-
-                HStack(spacing: 10) {
-                    Button("Ollama automatisch finden") {
-                        if settings.autoDetectOllamaBinaryPath() {
-                            ollamaDetectFeedback = "Ollama CLI gefunden: \(settings.ollamaBinaryPath)"
-                        } else {
-                            ollamaDetectFeedback = "Kein ollama CLI gefunden. Installiere Ollama oder wähle die Datei manuell aus."
-                        }
-                    }
-                    .buttonStyle(.bordered)
-
-                    if !ollamaDetectFeedback.isEmpty {
-                        Text(ollamaDetectFeedback)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                TextField("Modellname", text: $settings.ollamaModel)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            Section("Diktiermodus") {
-                Picker("Standardmodus", selection: $settings.dictationMode) {
-                    ForEach(DictationMode.allCases) { mode in
-                        Text(mode.displayName).tag(mode)
-                    }
-                }
-            }
-
-            Section("Einfügen & Overlay") {
-                Toggle("Text automatisch einfügen", isOn: $settings.autoPasteEnabled)
-
-                Text("Wenn deaktiviert, wird der Text nur in die Zwischenablage kopiert.")
-                    .font(.caption)
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Einstellungen")
+                    .font(.title2.weight(.semibold))
+                Text("System, Modelle, Sprache, Hotkeys und Overlay zentral konfigurieren.")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
+            }
 
-                Toggle("Overlay anzeigen (immer im Vordergrund)", isOn: $settings.showFloatingOverlay)
+            Form {
+                Section("whisper.cpp") {
+                    HStack {
+                        TextField("Pfad zu whisper-cli", text: $settings.whisperBinaryPath)
+                            .textFieldStyle(.roundedBorder)
+                        Button("Auswählen…") {
+                            chooseWhisperBinary()
+                        }
+                    }
 
-                HStack {
+                    HStack(spacing: 10) {
+                        Button("Whisper automatisch finden") {
+                            if settings.autoDetectWhisperBinaryPath() {
+                                binaryDetectFeedback = "CLI gefunden: \(settings.whisperBinaryPath)"
+                            } else {
+                                binaryDetectFeedback = "Kein whisper-cli gefunden. Installiere whisper.cpp oder wähle die Datei manuell aus."
+                            }
+                        }
+                        .buttonStyle(.bordered)
+
+                        if !binaryDetectFeedback.isEmpty {
+                            Text(binaryDetectFeedback)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    HStack {
+                        TextField("Modellordner (ggml-*.bin)", text: $settings.whisperModelDirectory)
+                            .textFieldStyle(.roundedBorder)
+                        Button("Auswählen…") {
+                            chooseModelDirectory()
+                        }
+                    }
+
+                    HStack(spacing: 10) {
+                        Button("Modellordner automatisch finden") {
+                            if settings.autoDetectWhisperModelDirectory() {
+                                modelDetectFeedback = "Modellordner gefunden: \(settings.whisperModelDirectory)"
+                            } else {
+                                modelDetectFeedback = "Kein Modellordner mit ggml-*.bin gefunden. Lade z. B. ggml-small.bin herunter."
+                            }
+                        }
+                        .buttonStyle(.bordered)
+
+                        if !modelDetectFeedback.isEmpty {
+                            Text(modelDetectFeedback)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Section("Lokale KI (Ollama)") {
+                    HStack {
+                        TextField("Pfad zu ollama", text: $settings.ollamaBinaryPath)
+                            .textFieldStyle(.roundedBorder)
+                        Button("Auswählen…") {
+                            chooseOllamaBinary()
+                        }
+                    }
+
+                    HStack(spacing: 10) {
+                        Button("Ollama automatisch finden") {
+                            if settings.autoDetectOllamaBinaryPath() {
+                                ollamaDetectFeedback = "Ollama CLI gefunden: \(settings.ollamaBinaryPath)"
+                            } else {
+                                ollamaDetectFeedback = "Kein ollama CLI gefunden. Installiere Ollama oder wähle die Datei manuell aus."
+                            }
+                        }
+                        .buttonStyle(.bordered)
+
+                        if !ollamaDetectFeedback.isEmpty {
+                            Text(ollamaDetectFeedback)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    TextField("Modellname", text: $settings.ollamaModel)
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                Section("Diktiermodus") {
+                    Picker("Standardmodus", selection: $settings.dictationMode) {
+                        ForEach(DictationMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                }
+
+                Section("Einfügen & Overlay") {
+                    Toggle("Text automatisch einfügen", isOn: $settings.autoPasteEnabled)
+
+                    Text("Wenn deaktiviert, wird der Text nur in die Zwischenablage kopiert.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Toggle("Overlay anzeigen (immer im Vordergrund)", isOn: $settings.showFloatingOverlay)
+
+                    Toggle("Overlay verschiebbar", isOn: $settings.overlayMovable)
+
+                    Text("Wenn deaktiviert, ist das Overlay fest verankert und kann nicht verschoben werden.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    HStack {
                     Button("Position zurücksetzen") {
                         appViewModel.resetFloatingOverlayPosition()
                     }
@@ -120,135 +135,137 @@ struct SettingsView: View {
 
                     Spacer()
 
-                    if let origin = settings.overlayOriginPoint {
-                        Text("Aktuell: x \(Int(origin.x)), y \(Int(origin.y))")
+                        if let origin = settings.overlayOriginPoint {
+                            Text("Aktuell: x \(Int(origin.x)), y \(Int(origin.y))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Section("Sprache") {
+                    Picker("Transkriptionssprache", selection: $settings.primaryTranscriptionLanguage) {
+                        ForEach(TranscriptionLanguage.allCases) { language in
+                            Text(language.displayName).tag(language)
+                        }
+                    }
+
+                    DisclosureGroup("Zusätzliche Sprachen (Fallback)") {
+                        ForEach(
+                            TranscriptionLanguage.fallbackChoices.filter { $0 != settings.primaryTranscriptionLanguage },
+                            id: \.self
+                        ) { language in
+                            Toggle(language.displayName, isOn: fallbackBinding(for: language))
+                        }
+                    }
+
+                    Text("Wenn die primäre Sprache fehlschlägt, testet DictateFlow die Fallback-Sprachen in Reihenfolge.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Shortcut") {
+                    Picker("Taste", selection: $settings.hotkeyKey) {
+                        ForEach(HotkeyKey.allCases) { key in
+                            Text(key.displayName).tag(key)
+                        }
+                    }
+
+                    HStack(spacing: 14) {
+                        Toggle("⌘", isOn: $settings.hotkeyUseCommand)
+                        Toggle("⇧", isOn: $settings.hotkeyUseShift)
+                        Toggle("⌥", isOn: $settings.hotkeyUseOption)
+                        Toggle("⌃", isOn: $settings.hotkeyUseControl)
+                    }
+
+                    Text("Aktuell: \(settings.hotkeyDisplayString())")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Toggle("Push-to-Talk", isOn: $settings.pushToTalkEnabled)
+
+                    if settings.pushToTalkEnabled {
+                        Text("Halte den Shortcut gedrückt, während du sprichst.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
-            }
 
-            Section("Sprache") {
-                Picker("Transkriptionssprache", selection: $settings.primaryTranscriptionLanguage) {
-                    ForEach(TranscriptionLanguage.allCases) { language in
-                        Text(language.displayName).tag(language)
+                Section("System") {
+                    Toggle("Bei Anmeldung starten", isOn: $settings.launchAtLoginEnabled)
+
+                    if !launchAtLoginFeedback.isEmpty {
+                        Text(launchAtLoginFeedback)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
-                DisclosureGroup("Zusätzliche Sprachen (Fallback)") {
-                    ForEach(
-                        TranscriptionLanguage.fallbackChoices.filter { $0 != settings.primaryTranscriptionLanguage },
-                        id: \.self
-                    ) { language in
-                        Toggle(language.displayName, isOn: fallbackBinding(for: language))
+                Section("LMM-Auswahl") {
+                    HStack {
+                        Text("Aktives Modell")
+                        Spacer()
+                        Text(settings.selectedSpeechModel.displayName)
+                            .foregroundStyle(.secondary)
                     }
-                }
 
-                Text("Wenn die primäre Sprache fehlschlägt, testet DictateFlow die Fallback-Sprachen in Reihenfolge.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Shortcut") {
-                Picker("Taste", selection: $settings.hotkeyKey) {
-                    ForEach(HotkeyKey.allCases) { key in
-                        Text(key.displayName).tag(key)
-                    }
-                }
-
-                HStack(spacing: 14) {
-                    Toggle("⌘", isOn: $settings.hotkeyUseCommand)
-                    Toggle("⇧", isOn: $settings.hotkeyUseShift)
-                    Toggle("⌥", isOn: $settings.hotkeyUseOption)
-                    Toggle("⌃", isOn: $settings.hotkeyUseControl)
-                }
-
-                Text("Aktuell: \(settings.hotkeyDisplayString())")
+                    Text(
+                        "Größe: \(settings.selectedSpeechModel.sizeLabel) | " +
+                        "Speed: \(settings.selectedSpeechModel.speedLabel) | " +
+                        "Genauigkeit: \(settings.selectedSpeechModel.accuracyLabel)"
+                    )
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                Toggle("Push-to-Talk", isOn: $settings.pushToTalkEnabled)
+                    Button("LMM-Auswahlfenster öffnen") {
+                        showModelSelectionWindow = true
+                    }
+                    .buttonStyle(.borderedProminent)
 
-                if settings.pushToTalkEnabled {
-                    Text("Halte den Shortcut gedrückt, während du sprichst.")
+                    Text("Nicht installierte Modelle können direkt im Auswahlfenster heruntergeladen werden.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-            }
 
-            Section("System") {
-                Toggle("Bei Anmeldung starten", isOn: $settings.launchAtLoginEnabled)
+                Section("KI-Prompt") {
+                    Picker("Prompt-Stil", selection: $settings.promptStyle) {
+                        ForEach(PromptStyle.allCases) { style in
+                            Text(style.displayName).tag(style)
+                        }
+                    }
 
-                if !launchAtLoginFeedback.isEmpty {
-                    Text(launchAtLoginFeedback)
+                    if settings.promptStyle == .custom {
+                        TextField("Benutzerdefinierter Stil", text: $settings.customStyleInstruction)
+                            .textFieldStyle(.roundedBorder)
+                    }
+
+                    TextEditor(text: $settings.promptTemplate)
+                        .font(.body.monospaced())
+                        .frame(minHeight: 210)
+
+                    Text("Platzhalter: {{style_instruction}}, {{profile_hint}}, {{text}}")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                }
-            }
 
-            Section("LMM-Auswahl") {
-                HStack {
-                    Text("Aktives Modell")
-                    Spacer()
-                    Text(settings.selectedSpeechModel.displayName)
-                        .foregroundStyle(.secondary)
-                }
-
-                Text(
-                    "Größe: \(settings.selectedSpeechModel.sizeLabel) | " +
-                    "Speed: \(settings.selectedSpeechModel.speedLabel) | " +
-                    "Genauigkeit: \(settings.selectedSpeechModel.accuracyLabel)"
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-                Button("LMM-Auswahlfenster öffnen") {
-                    showModelSelectionWindow = true
-                }
-                .buttonStyle(.borderedProminent)
-
-                Text("Nicht installierte Modelle können direkt im Auswahlfenster heruntergeladen werden.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("KI-Prompt") {
-                Picker("Prompt-Stil", selection: $settings.promptStyle) {
-                    ForEach(PromptStyle.allCases) { style in
-                        Text(style.displayName).tag(style)
+                    HStack {
+                        Spacer()
+                        Button("Prompt zurücksetzen") {
+                            settings.resetPromptToDefault()
+                        }
                     }
                 }
 
-                if settings.promptStyle == .custom {
-                    TextField("Benutzerdefinierter Stil", text: $settings.customStyleInstruction)
-                        .textFieldStyle(.roundedBorder)
-                }
-
-                TextEditor(text: $settings.promptTemplate)
-                    .font(.body.monospaced())
-                    .frame(minHeight: 210)
-
-                Text("Platzhalter: {{style_instruction}}, {{profile_hint}}, {{text}}")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                HStack {
-                    Spacer()
-                    Button("Prompt zurücksetzen") {
-                        settings.resetPromptToDefault()
+                Section("Setup") {
+                    Button("Einrichtungsassistent öffnen") {
+                        appViewModel.openSetupWizard()
                     }
+                    .buttonStyle(.borderedProminent)
                 }
             }
-
-            Section("Setup") {
-                Button("Einrichtungsassistent öffnen") {
-                    appViewModel.openSetupWizard()
-                }
-                .buttonStyle(.borderedProminent)
-            }
+            .formStyle(.grouped)
         }
-        .formStyle(.grouped)
         .padding(16)
+        .frame(maxWidth: 980, alignment: .leading)
         .onChange(of: settings.dictationMode) {
             appViewModel.dictationMode = settings.dictationMode
         }
@@ -256,6 +273,9 @@ struct SettingsView: View {
             appViewModel.selectedSpeechModel = settings.selectedSpeechModel
         }
         .onChange(of: settings.showFloatingOverlay) {
+            appViewModel.applyFloatingOverlayVisibilitySetting()
+        }
+        .onChange(of: settings.overlayMovable) {
             appViewModel.applyFloatingOverlayVisibilitySetting()
         }
         .onChange(of: settings.hotkeyKey) {

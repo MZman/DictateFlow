@@ -12,10 +12,12 @@ DictateFlow ist auf Datenschutz und Geschwindigkeit ausgelegt:
 - Verlauf wird lokal in SQLite gespeichert.
 
 Standardmäßig ist der Modus auf **Reines Diktat** gesetzt. KI ist also bei Erststart aus.
+Standardmäßig ist außerdem das Profil **Erinnerungen niederschreiben** vorausgewählt.
 
 ## Kernfunktionen
 
 - SwiftUI-Mac-App mit Tabs: Aufnahme, Verlauf, Einstellungen
+- Aufgeräumtes, card-basiertes UI-Layout für Aufnahme, Verlauf und Einstellungen
 - Aufnahme-Status: `Bereit`, `Aufnahme läuft`, `Verarbeitung…`, `KI-Bearbeitung…`, `Fehler`
 - AVFoundation-Aufnahme als WAV/PCM (16kHz, mono)
 - Lokale Whisper-Transkription mit Modellwahl
@@ -23,7 +25,8 @@ Standardmäßig ist der Modus auf **Reines Diktat** gesetzt. KI ist also bei Ers
 - Sprachbefehle im Transkript (z. B. `neuer Absatz`, `nummerierte Liste`, `Stichpunkte`)
 - Globaler Hotkey (konfigurierbar), inkl. Push-to-Talk
 - Menüleisten-Fenster mit Status, letzter Transkription und Mikrofon-Auswahl
-- Floating Overlay (optional, always-on-top, verschiebbar)
+- Menüleisten-Fenster in kompakter Breite (zuletzt um ~25 % verkleinert)
+- Floating Overlay (optional, always-on-top, mit Modus `fest verankert` oder `verschiebbar`)
 - Auto-Paste (optional) mit klarer Accessibility-Fehlerbehandlung
 - Setup-Assistent für Erstinstallation (Homebrew, Tools, Rechte)
 
@@ -110,12 +113,22 @@ xcodebuild \
 - Über Menüleisten-Fenster
 - Über Floating Overlay (wenn aktiviert)
 
+### UI-Layout
+
+- **Aufnahme**: klare Karten für Status, Diktiersteuerung und letzte Transkriptionen
+- **Verlauf**: zweigeteiltes, ruhiges Panel-Layout (Liste links, Detaileditor rechts)
+- **Einstellungen**: strukturierter Header + gruppierte Konfigurationsblöcke
+
 ### Overlay-Verhalten
 
 - Idle: kleiner Mikrofon-Button
 - Aufnahme aktiv: `X` bricht die Aufnahme ab (ohne Transkription)
 - Aufnahme aktiv: roter `Stop` beendet Aufnahme und startet Transkription
 - Audio-Spektrum visualisiert Eingangspegel
+- Overlay kann per Setting fixiert oder verschiebbar geschaltet werden
+- Bei deaktiviertem Verschiebe-Modus bleibt das Overlay fest an der zuletzt gesetzten Position
+- Nur `Position zurücksetzen` setzt das Overlay auf die Initialposition zurück
+- Die Overlay-Position bleibt auch nach Start/Stopp einer Aufnahme erhalten (in beiden Modi)
 
 ### Diktiermodi
 
@@ -124,6 +137,7 @@ xcodebuild \
 
 ### Profile
 
+- Standardprofil: **Erinnerungen niederschreiben**
 - E-Mail
 - Ticket
 - Meetingnotiz
@@ -164,7 +178,8 @@ Hinweis: `Parakeet v3` ist aktuell ein Profil und nutzt zur Laufzeit Whisper Lar
 - Diktiermodus (Default: Reines Diktat)
 - Prompt-Stil + benutzerdefinierte Prompt-Template-Platzhalter
 - Auto-Einfügen an Cursorposition (an/aus)
-- Floating Overlay (an/aus), Position zurücksetzen
+- Floating Overlay (an/aus), `Overlay verschiebbar` (an/aus), Position zurücksetzen
+- `Position zurücksetzen` ist immer verfügbar (auch bei deaktiviertem Verschiebe-Modus)
 - Transkriptionssprache + Fallbacks
 - Hotkey (Taste + Modifiers), Push-to-Talk
 - Start bei Anmeldung
@@ -175,6 +190,7 @@ Hinweis: `Parakeet v3` ist aktuell ein Profil und nutzt zur Laufzeit Whisper Lar
 - Verlauf (SQLite): `~/Library/Application Support/DictateFlow/history.sqlite`
 - Temporäre Aufnahmen: `~/Library/Application Support/DictateFlow/Recordings`
 - Empfohlener Modellordner: `~/Library/Application Support/DictateFlow/whisper-models`
+- App-Icon-Assets: `DictateFlow/Resources/Assets.xcassets/AppIcon.appiconset`
 
 Hinweis: Aufnahme-Dateien werden nach Verarbeitung wieder gelöscht.
 
@@ -233,6 +249,17 @@ ollama serve
 ```bash
 tccutil reset Accessibility com.mesutoezciftci.DictateFlow
 ```
+
+### `App-Icon wird nicht angezeigt`
+
+- Sicherstellen, dass das Projekt frisch aus `project.yml` generiert wurde:
+
+```bash
+xcodegen generate
+```
+
+- In Xcode `Product > Clean Build Folder` ausführen und neu starten.
+- Danach den `DerivedData`-Build erneut starten, damit `Assets.car` und `AppIcon.icns` neu erzeugt werden.
 
 ## Architektur (Datei-Übersicht)
 

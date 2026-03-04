@@ -13,28 +13,65 @@ struct HistoryView: View {
 
     var body: some View {
         HSplitView {
-            List(viewModel.history, selection: $selectedID) { item in
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Label(item.profile.displayName, systemImage: item.profile.systemImage)
-                            .font(.headline)
-                        Spacer()
-                        Text(item.createdAt.formatted(date: .abbreviated, time: .shortened))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Text(item.displayText)
-                        .lineLimit(2)
-                        .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Verlauf")
+                        .font(.title3.weight(.semibold))
+                    Spacer()
+                    Text("\(viewModel.history.count)")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(Color.secondary.opacity(0.15))
+                        )
                 }
-                .padding(.vertical, 4)
-                .tag(item.id)
+
+                if viewModel.history.isEmpty {
+                    ContentUnavailableView(
+                        "Keine Transkripte vorhanden",
+                        systemImage: "clock.arrow.circlepath",
+                        description: Text("Sobald du aufnimmst, erscheint der Verlauf hier.")
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List(viewModel.history, selection: $selectedID) { item in
+                        VStack(alignment: .leading, spacing: 5) {
+                            HStack {
+                                Label(item.profile.displayName, systemImage: item.profile.systemImage)
+                                    .font(.subheadline.weight(.semibold))
+                                Spacer()
+                                Text(item.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Text(item.displayText)
+                                .lineLimit(2)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                        .tag(item.id)
+                    }
+                    .listStyle(.inset(alternatesRowBackgrounds: true))
+                }
             }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.7))
+            )
             .frame(minWidth: 340)
 
             detailPanel
-                .frame(minWidth: 500)
+                .frame(minWidth: 500, maxWidth: .infinity, maxHeight: .infinity)
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.7))
+                )
         }
         .onAppear {
             ensureSelection()
@@ -64,8 +101,13 @@ struct HistoryView: View {
                 TextEditor(text: $draftText)
                     .font(.body)
                     .frame(minHeight: 300)
+                    .padding(6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color(nsColor: .textBackgroundColor))
+                    )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
+                        RoundedRectangle(cornerRadius: 10)
                             .stroke(Color.secondary.opacity(0.25), lineWidth: 1)
                     )
 

@@ -7,7 +7,7 @@ struct MenuBarControlView: View {
     @Environment(\.openWindow) private var openWindow
 
     @State private var availableInputDevices: [AudioInputDevice] = []
-    private let panelWidth: CGFloat = 332
+    private let panelWidth: CGFloat = 250
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,17 +19,17 @@ struct MenuBarControlView: View {
             sectionDivider
             actionSection
         }
-        .padding(8)
+        .padding(6)
         .frame(width: panelWidth)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
                 .fill(.ultraThinMaterial.opacity(0.85))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.white.opacity(0.16), lineWidth: 0.8)
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .stroke(Color.white.opacity(0.16), lineWidth: 0.7)
         )
-        .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
+        .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
         .task {
             await viewModel.bootstrapIfNeeded()
             refreshInputDevices()
@@ -40,48 +40,48 @@ struct MenuBarControlView: View {
     }
 
     private var statusSection: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             Image(systemName: statusIconName)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(viewModel.status.bannerColor)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(viewModel.status.label)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(viewModel.status.bannerColor)
                 Text(viewModel.statusMessage)
-                    .font(.system(size: 11, weight: .regular))
+                    .font(.system(size: 9.5, weight: .regular))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
 
             Spacer()
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 6)
     }
 
     private var transcriptSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text("Letzte Transkription")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 10.5, weight: .semibold))
                 .foregroundStyle(.secondary)
 
             Text(lastTranscriptionPreview)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 11, weight: .medium))
                 .lineLimit(4)
                 .truncationMode(.tail)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 6)
     }
 
     private var microphoneSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text("Mikrofon")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 10.5, weight: .semibold))
                 .foregroundStyle(.secondary)
 
             Picker("Mikrofon", selection: $settings.preferredInputDeviceUID) {
@@ -91,18 +91,18 @@ struct MenuBarControlView: View {
                 }
             }
             .labelsHidden()
-            .font(.system(size: 12, weight: .regular))
+            .font(.system(size: 11, weight: .regular))
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if !settings.preferredInputDeviceUID.isEmpty,
                availableInputDevices.contains(where: { $0.id == settings.preferredInputDeviceUID }) == false {
                 Text("Ausgewähltes Gerät ist nicht verfügbar, daher wird Systemstandard genutzt.")
-                    .font(.system(size: 10, weight: .regular))
+                    .font(.system(size: 9, weight: .regular))
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 6)
     }
 
     private var actionSection: some View {
@@ -192,26 +192,26 @@ struct MenuBarControlView: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(width: 16, alignment: .center)
+                    .font(.system(size: 10, weight: .semibold))
+                    .frame(width: 13, alignment: .center)
                     .foregroundStyle(.primary)
 
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
 
                 Spacer()
 
                 if let shortcut, !shortcut.isEmpty {
                     Text(shortcut)
-                        .font(.system(size: 11, weight: .regular))
+                        .font(.system(size: 9.5, weight: .regular))
                         .foregroundStyle(.secondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 6)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())

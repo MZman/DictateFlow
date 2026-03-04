@@ -2,6 +2,12 @@ import Foundation
 import AVFoundation
 
 final class AudioRecorder: NSObject {
+    private enum MicrophonePermissionState {
+        case granted
+        case denied
+        case undetermined
+    }
+
     enum RecorderError: LocalizedError {
         case microphonePermissionDenied
         case cannotCreateRecorder
@@ -29,20 +35,77 @@ final class AudioRecorder: NSObject {
     private(set) var currentFileURL: URL?
     private var previousDefaultInputDeviceID: UInt32?
 
+    func isMicrophonePermissionGranted() -> Bool {
+        microphonePermissionState() == .granted
+    }
+
     func requestPermissionIfNeeded() async -> Bool {
-        switch AVCaptureDevice.authorizationStatus(for: .audio) {
-        case .authorized:
+        switch microphonePermissionState() {
+        case .granted:
             return true
-        case .notDetermined:
-            return await withCheckedContinuation { continuation in
-                AVCaptureDevice.requestAccess(for: .audio) { granted in
-                    continuation.resume(returning: granted)
+        case .undetermined:
+            let granted: Bool = await withCheckedContinuation { continuation in
+                if #available(macOS 14.0, *) {
+                    AVAudioApplication.requestRecordPermission { granted in
+                        continuation.resume(returning: granted)
+                    }
+                } else {
+                    AVCaptureDevice.requestAccess(for: .audio) { granted in
+                        continuation.resume(returning: granted)
+                    }
                 }
             }
+            if granted {
+                return true
+            }
+            // Defensive polling: TCC updates can lag briefly right after the system prompt closes.
+            return await waitForMicrophonePermission(timeout: 1.5, pollInterval: 0.25)
+        case .denied:
+            return false
+        }
+    }
+
+    func waitForMicrophonePermission(timeout: TimeInterval = 20, pollInterval: TimeInterval = 0.5) async -> Bool {
+        if isMicrophonePermissionGranted() {
+            return true
+        }
+
+        let interval = max(0.1, pollInterval)
+        let deadline = Date().addingTimeInterval(max(0, timeout))
+        while Date() < deadline {
+            let nanoseconds = UInt64(interval * 1_000_000_000)
+            try? await Task.sleep(nanoseconds: nanoseconds)
+            if isMicrophonePermissionGranted() {
+                return true
+            }
+        }
+
+        return isMicrophonePermissionGranted()
+    }
+
+    private func microphonePermissionState() -> MicrophonePermissionState {
+        if #available(macOS 14.0, *) {
+            switch AVAudioApplication.shared.recordPermission {
+            case .granted:
+                return .granted
+            case .denied:
+                return .denied
+            case .undetermined:
+                return .undetermined
+            @unknown default:
+                return .denied
+            }
+        }
+
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .authorized:
+            return .granted
+        case .notDetermined:
+            return .undetermined
         case .denied, .restricted:
-            return false
+            return .denied
         @unknown default:
-            return false
+            return .denied
         }
     }
 

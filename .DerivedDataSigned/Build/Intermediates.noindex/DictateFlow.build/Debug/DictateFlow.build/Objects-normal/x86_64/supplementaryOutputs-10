@@ -1,0 +1,23 @@
+{
+  "/Users/mesutoezciftci/Documents/projects/DictateGo/DictateFlow/Helpers/LaunchAtLoginManager.swift" : {
+    "const-values" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/LaunchAtLoginManager.swiftconstvalues",
+    "dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/LaunchAtLoginManager.d",
+    "diagnostics" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/LaunchAtLoginManager.dia",
+    "object" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/LaunchAtLoginManager.o",
+    "swift-dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/LaunchAtLoginManager.swiftdeps"
+  },
+  "/Users/mesutoezciftci/Documents/projects/DictateGo/DictateFlow/Views/MainView.swift" : {
+    "const-values" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/MainView.swiftconstvalues",
+    "dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/MainView.d",
+    "diagnostics" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/MainView.dia",
+    "object" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/MainView.o",
+    "swift-dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/MainView.swiftdeps"
+  },
+  "/Users/mesutoezciftci/Documents/projects/DictateGo/DictateFlow/Views/MenuBarControlView.swift" : {
+    "const-values" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/MenuBarControlView.swiftconstvalues",
+    "dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/MenuBarControlView.d",
+    "diagnostics" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/MenuBarControlView.dia",
+    "object" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/MenuBarControlView.o",
+    "swift-dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/MenuBarControlView.swiftdeps"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "/Users/mesutoezciftci/Documents/projects/DictateGo/DictateFlow/Helpers/HotkeyManager.swift" : {
+    "const-values" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/HotkeyManager.swiftconstvalues",
+    "dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/HotkeyManager.d",
+    "diagnostics" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/HotkeyManager.dia",
+    "object" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/HotkeyManager.o",
+    "swift-dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/HotkeyManager.swiftdeps"
+  },
+  "/Users/mesutoezciftci/Documents/projects/DictateGo/DictateFlow/Models/HotkeyShortcut.swift" : {
+    "const-values" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/HotkeyShortcut.swiftconstvalues",
+    "dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/HotkeyShortcut.d",
+    "diagnostics" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/HotkeyShortcut.dia",
+    "object" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/HotkeyShortcut.o",
+    "swift-dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/HotkeyShortcut.swiftdeps"
+  },
+  "/Users/mesutoezciftci/Documents/projects/DictateGo/DictateFlow/Views/HistoryView.swift" : {
+    "const-values" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/HistoryView.swiftconstvalues",
+    "dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/HistoryView.d",
+    "diagnostics" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/HistoryView.dia",
+    "object" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/HistoryView.o",
+    "swift-dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/HistoryView.swiftdeps"
+  }
+}

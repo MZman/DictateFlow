@@ -148,7 +148,7 @@ final class SetupWizardViewModel: ObservableObject {
             isOllamaServerRunning = await ollamaService.isServerRunning(binaryPath: resolvedOllamaPath)
         }
 
-        isMicrophoneGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        isMicrophoneGranted = audioRecorder.isMicrophonePermissionGranted()
         isAccessibilityGranted = isAccessibilityRequired ? clipboardManager.hasAccessibilityPermission() : true
     }
 
@@ -230,10 +230,20 @@ final class SetupWizardViewModel: ObservableObject {
 
     func requestMicrophonePermission() async {
         await runTask("Mikrofon-Berechtigung wird angefragt…") {
-            let granted = await audioRecorder.requestPermissionIfNeeded()
+            var granted = await audioRecorder.requestPermissionIfNeeded()
             if !granted {
                 openSystemSettings(anchor: "Privacy_Microphone")
-                throw SetupError.permissionDenied("Mikrofon wurde nicht freigegeben.")
+                appendLog("Bitte Mikrofon in den Systemeinstellungen erlauben (warte bis zu 20 Sekunden)…")
+                granted = await audioRecorder.waitForMicrophonePermission(timeout: 20, pollInterval: 0.5)
+            }
+            if !granted {
+                throw SetupError.permissionDenied(
+                    """
+                    Mikrofon wurde nicht freigegeben.
+                    Aktiviere DictateFlow unter Systemeinstellungen > Datenschutz & Sicherheit > Mikrofon.
+                    Bei mehreren DictateFlow-Einträgen alte entfernen und die App neu starten.
+                    """
+                )
             }
             appendLog("Mikrofonzugriff freigegeben.")
         }

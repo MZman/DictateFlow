@@ -13,7 +13,7 @@ struct DictateFlowApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("DictateFlow", id: "main") {
+        Window("DictateFlow", id: "main") {
             MainView()
                 .environmentObject(settingsStore)
                 .environmentObject(viewModel)

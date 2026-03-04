@@ -1,0 +1,23 @@
+{
+  "/Users/mesutoezciftci/Documents/projects/DictateGo/DictateFlow/Managers/OllamaService.swift" : {
+    "const-values" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/OllamaService.swiftconstvalues",
+    "dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/OllamaService.d",
+    "diagnostics" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/OllamaService.dia",
+    "object" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/OllamaService.o",
+    "swift-dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/OllamaService.swiftdeps"
+  },
+  "/Users/mesutoezciftci/Documents/projects/DictateGo/DictateFlow/Views/ModelSelectionView.swift" : {
+    "const-values" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/ModelSelectionView.swiftconstvalues",
+    "dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/ModelSelectionView.d",
+    "diagnostics" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/ModelSelectionView.dia",
+    "object" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/ModelSelectionView.o",
+    "swift-dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/ModelSelectionView.swiftdeps"
+  },
+  "/Users/mesutoezciftci/Documents/projects/DictateGo/DictateFlow/Views/OverlayView.swift" : {
+    "const-values" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/OverlayView.swiftconstvalues",
+    "dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/OverlayView.d",
+    "diagnostics" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/OverlayView.dia",
+    "object" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/OverlayView.o",
+    "swift-dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/x86_64/OverlayView.swiftdeps"
+  }
+}

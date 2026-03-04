@@ -485,7 +485,7 @@ final class AppViewModel: ObservableObject {
 
         let hasWhisper = WhisperService.resolveWhisperBinaryPath(preferredPath: settings.whisperBinaryPath) != nil
         let hasOllama = OllamaService.resolveOllamaBinaryPath(preferredPath: settings.ollamaBinaryPath) != nil
-        let hasMicrophonePermission = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        let hasMicrophonePermission = audioRecorder.isMicrophonePermissionGranted()
         let hasAccessibilityPermission = !settings.autoPasteEnabled || clipboardManager.hasAccessibilityPermission()
 
         let allReady = hasWhisper && hasOllama && hasMicrophonePermission && hasAccessibilityPermission

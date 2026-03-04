@@ -1,0 +1,23 @@
+{
+  "/Users/mesutoezciftci/Documents/projects/DictateGo/DictateFlow/Helpers/ProcessRunner.swift" : {
+    "const-values" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/arm64/ProcessRunner.swiftconstvalues",
+    "dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/arm64/ProcessRunner.d",
+    "diagnostics" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/arm64/ProcessRunner.dia",
+    "object" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/arm64/ProcessRunner.o",
+    "swift-dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/arm64/ProcessRunner.swiftdeps"
+  },
+  "/Users/mesutoezciftci/Documents/projects/DictateGo/DictateFlow/Helpers/SettingsStore.swift" : {
+    "const-values" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/arm64/SettingsStore.swiftconstvalues",
+    "dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/arm64/SettingsStore.d",
+    "diagnostics" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/arm64/SettingsStore.dia",
+    "object" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/arm64/SettingsStore.o",
+    "swift-dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/arm64/SettingsStore.swiftdeps"
+  },
+  "/Users/mesutoezciftci/Documents/projects/DictateGo/DictateFlow/Models/Profile.swift" : {
+    "const-values" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/arm64/Profile.swiftconstvalues",
+    "dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/arm64/Profile.d",
+    "diagnostics" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/arm64/Profile.dia",
+    "object" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/arm64/Profile.o",
+    "swift-dependencies" : "/Users/mesutoezciftci/Documents/projects/DictateGo/.DerivedDataSigned/Build/Intermediates.noindex/DictateFlow.build/Debug/DictateFlow.build/Objects-normal/arm64/Profile.swiftdeps"
+  }
+}

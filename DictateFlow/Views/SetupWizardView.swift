@@ -2,12 +2,15 @@ import SwiftUI
 
 struct SetupWizardView: View {
     @StateObject private var viewModel: SetupWizardViewModel
+    private let settings: SettingsStore
 
     private let onFinish: (_ markedComplete: Bool) -> Void
 
     @State private var showHomebrewInstallConfirmation = false
+    @State private var showModelSelectionWindow = false
 
     init(settings: SettingsStore, onFinish: @escaping (_ markedComplete: Bool) -> Void) {
+        self.settings = settings
         _viewModel = StateObject(wrappedValue: SetupWizardViewModel(settings: settings))
         self.onFinish = onFinish
     }
@@ -49,6 +52,20 @@ struct SetupWizardView: View {
             Button("Abbrechen", role: .cancel) {}
         } message: {
             Text("Homebrew wird auf diesem Mac installiert. Danach können wir ollama und whisper-cpp automatisch installieren.")
+        }
+        .sheet(isPresented: $showModelSelectionWindow) {
+            ModelSelectionView(
+                selectedModel: Binding(
+                    get: { settings.selectedSpeechModel },
+                    set: { settings.selectedSpeechModel = $0 }
+                )
+            ) {
+                showModelSelectionWindow = false
+                Task {
+                    await viewModel.refreshAll()
+                }
+            }
+            .environmentObject(settings)
         }
     }
 
@@ -131,8 +148,8 @@ struct SetupWizardView: View {
                 .buttonStyle(.bordered)
                 .disabled(viewModel.isWorking || !viewModel.isBrewInstalled)
 
-                Button("Small-Modell laden") {
-                    Task { await viewModel.downloadRecommendedWhisperModel() }
+                Button("LMM-Auswahlfenster öffnen") {
+                    showModelSelectionWindow = true
                 }
                 .buttonStyle(.bordered)
                 .disabled(viewModel.isWorking)

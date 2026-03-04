@@ -9,8 +9,8 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
     var onPositionChanged: ((CGPoint) -> Void)?
 
     private var panel: NSPanel?
-    private let idleSize = NSSize(width: 38, height: 38)
-    private let recordingSize = NSSize(width: 228, height: 46)
+    private let idleSize = NSSize(width: 124, height: 38)
+    private let recordingSize = NSSize(width: 205, height: 41)
     private let screenInset: CGFloat = 10
 
     private var isRecording = false
@@ -19,11 +19,16 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
     private var status: AppStatus = .ready
     private var audioLevel: Double = 0
     private var isApplyingFrameConstraint = false
+    private var dragStartPanelOrigin: CGPoint?
+    private var isOverlayDragging = false
 
     private let renderState = OverlayRenderState()
 
     private var currentPanelSize: NSSize {
-        isRecording ? recordingSize : idleSize
+        if isRecording {
+            return recordingSize
+        }
+        return idleSize
     }
 
     func setVisible(_ isVisible: Bool, preferredOrigin: CGPoint?, movable: Bool) {
@@ -46,6 +51,9 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
         if isVisible {
             show(preferredOrigin: preferredOrigin)
         } else {
+            renderState.isIdleHovered = false
+            isOverlayDragging = false
+            renderState.isOverlayDragging = false
             panel?.orderOut(nil)
         }
     }
@@ -56,11 +64,18 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
         self.isRecording = isRecording
         self.audioLevel = max(0, min(1, audioLevel))
 
+        if isRecording {
+            renderState.isIdleHovered = false
+            isOverlayDragging = false
+            renderState.isOverlayDragging = false
+            dragStartPanelOrigin = nil
+        }
+
         renderState.status = status
         renderState.isRecording = isRecording
         renderState.audioLevel = self.audioLevel
 
-        panel?.isMovableByWindowBackground = overlayMovableEnabled && !isRecording
+        panel?.isMovableByWindowBackground = false
 
         if previousRecordingState != isRecording {
             resizePanelForCurrentState()
@@ -122,7 +137,7 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
             newPanel.isOpaque = false
             newPanel.hasShadow = true
             newPanel.hidesOnDeactivate = false
-            newPanel.isMovableByWindowBackground = overlayMovableEnabled && !isRecording
+            newPanel.isMovableByWindowBackground = false
             newPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
             newPanel.delegate = self
             newPanel.ignoresMouseEvents = false
@@ -132,7 +147,19 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
                     state: renderState,
                     onStart: { [weak self] in self?.onStartPressed?() },
                     onCancel: { [weak self] in self?.onCancelPressed?() },
-                    onStop: { [weak self] in self?.onStopPressed?() }
+                    onStop: { [weak self] in self?.onStopPressed?() },
+                    onIdleHoverChanged: { [weak self] isHovering in
+                        self?.handleIdleHoverChanged(isHovering)
+                    },
+                    onDragBegan: { [weak self] in
+                        self?.handleOverlayDragBegan()
+                    },
+                    onDragChanged: { [weak self] translation in
+                        self?.handleOverlayDragChanged(translation)
+                    },
+                    onDragEnded: { [weak self] in
+                        self?.handleOverlayDragEnded()
+                    }
                 )
             )
 
@@ -154,17 +181,21 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
         let targetSize = currentPanelSize
         guard oldFrame.size != targetSize else { return }
 
-        // Behalte die obere rechte Ecke stabil, damit die Position beim Wechsel
-        // zwischen Idle und Aufnahme erhalten bleibt.
+        // Transformiere vom Mittelpunkt des aktuellen Overlays in die Zielgröße.
+        let centerX = oldFrame.midX
+        let centerY = oldFrame.midY
         let candidate = NSRect(
-            x: oldFrame.maxX - targetSize.width,
-            y: oldFrame.maxY - targetSize.height,
+            x: centerX - (targetSize.width / 2),
+            y: centerY - (targetSize.height / 2),
             width: targetSize.width,
             height: targetSize.height
         )
 
         let constrained = constrainedFrame(candidate, preferredScreen: panel.screen ?? screenForFrame(oldFrame))
-        panel.setFrame(constrained, display: true, animate: true)
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.24
+            panel.animator().setFrame(constrained, display: true)
+        }
         if !overlayMovableEnabled {
             pinnedOrigin = constrained.origin
         }
@@ -261,6 +292,50 @@ final class FloatingOverlayController: NSObject, NSWindowDelegate {
         isApplyingFrameConstraint = false
         pinnedOrigin = constrained.origin
     }
+
+    private func handleIdleHoverChanged(_ isHovering: Bool) {
+        guard !isRecording else { return }
+        guard !isOverlayDragging else { return }
+        guard renderState.isIdleHovered != isHovering else { return }
+        renderState.isIdleHovered = isHovering
+    }
+
+    private func handleOverlayDragBegan() {
+        guard overlayMovableEnabled, !isRecording, let panel else { return }
+        isOverlayDragging = true
+        renderState.isOverlayDragging = true
+        dragStartPanelOrigin = panel.frame.origin
+        withAnimation(.none) {
+            renderState.isIdleHovered = true
+        }
+    }
+
+    private func handleOverlayDragChanged(_ translation: CGSize) {
+        guard overlayMovableEnabled, !isRecording, let panel else { return }
+
+        if dragStartPanelOrigin == nil {
+            dragStartPanelOrigin = panel.frame.origin
+        }
+
+        let startOrigin = dragStartPanelOrigin ?? panel.frame.origin
+        let candidate = NSRect(
+            x: startOrigin.x + translation.width,
+            y: startOrigin.y - translation.height,
+            width: panel.frame.width,
+            height: panel.frame.height
+        )
+        let constrained = constrainedFrame(candidate, preferredScreen: panel.screen ?? screenForFrame(panel.frame))
+
+        isApplyingFrameConstraint = true
+        panel.setFrameOrigin(constrained.origin)
+        isApplyingFrameConstraint = false
+    }
+
+    private func handleOverlayDragEnded() {
+        dragStartPanelOrigin = nil
+        isOverlayDragging = false
+        renderState.isOverlayDragging = false
+    }
 }
 
 @MainActor
@@ -268,6 +343,8 @@ private final class OverlayRenderState: ObservableObject {
     @Published var status: AppStatus = .ready
     @Published var isRecording = false
     @Published var audioLevel: Double = 0
+    @Published var isIdleHovered = false
+    @Published var isOverlayDragging = false
 }
 
 private struct OverlayRootView: View {
@@ -275,47 +352,117 @@ private struct OverlayRootView: View {
     let onStart: () -> Void
     let onCancel: () -> Void
     let onStop: () -> Void
+    let onIdleHoverChanged: (Bool) -> Void
+    let onDragBegan: () -> Void
+    let onDragChanged: (CGSize) -> Void
+    let onDragEnded: () -> Void
+
+    @State private var isDragging = false
 
     var body: some View {
-        Group {
-            if state.isRecording {
-                RecordingOverlayView(
-                    audioLevel: state.audioLevel,
-                    onCancel: onCancel,
-                    onStop: onStop
-                )
-            } else {
-                IdleOverlayView(
-                    tintColor: state.status.bannerColor,
-                    onStart: onStart
-                )
-            }
+        ZStack {
+            IdleOverlayView(
+                tintColor: state.status.bannerColor,
+                isHovered: state.isIdleHovered,
+                isDragging: state.isOverlayDragging,
+                onStart: onStart,
+                onHoverChanged: onIdleHoverChanged
+            )
+            .opacity(state.isRecording ? 0 : 1)
+            .scaleEffect(state.isRecording ? 0.94 : 1, anchor: .center)
+            .allowsHitTesting(!state.isRecording)
+
+            RecordingOverlayView(
+                audioLevel: state.audioLevel,
+                onCancel: onCancel,
+                onStop: onStop
+            )
+            .opacity(state.isRecording ? 1 : 0)
+            .scaleEffect(state.isRecording ? 1 : 0.96, anchor: .center)
+            .allowsHitTesting(state.isRecording)
         }
+        .animation(.easeInOut(duration: 0.24), value: state.isRecording)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 3)
+                .onChanged { value in
+                    guard !state.isRecording else { return }
+                    if !isDragging {
+                        isDragging = true
+                        onDragBegan()
+                    }
+                    onDragChanged(value.translation)
+                }
+                .onEnded { _ in
+                    guard isDragging else { return }
+                    isDragging = false
+                    onDragEnded()
+                }
+        )
     }
 }
 
 private struct IdleOverlayView: View {
     let tintColor: Color
+    let isHovered: Bool
+    let isDragging: Bool
     let onStart: () -> Void
+    let onHoverChanged: (Bool) -> Void
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(Color.gray.opacity(0.36))
-                .overlay(
-                    Circle().stroke(tintColor.opacity(0.44), lineWidth: 0.8)
-                )
-                .frame(width: 30, height: 30)
-
+        ZStack(alignment: .leading) {
             Button(action: onStart) {
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(tintColor)
+                ZStack {
+                    Circle()
+                        .fill(Color.gray.opacity(0.36))
+                        .overlay(
+                            Circle().stroke(tintColor.opacity(0.44), lineWidth: 0.8)
+                        )
+                        .frame(width: 30, height: 30)
+
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(tintColor)
+                }
+                .frame(width: 38, height: 38)
             }
             .buttonStyle(.plain)
+            .opacity(isHovered ? 0 : 1)
+            .scaleEffect(isHovered ? 0.88 : 1, anchor: .leading)
+            .allowsHitTesting(!isHovered)
+
+            Button(action: onStart) {
+                HStack(spacing: 8) {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(tintColor)
+
+                    Text("Diktieren")
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.96))
+                        .lineLimit(1)
+
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 12)
+                .frame(width: 124, height: 38, alignment: .leading)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(Color.gray.opacity(0.36))
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(tintColor.opacity(0.44), lineWidth: 0.8)
+                )
+            }
+            .buttonStyle(.plain)
+            .opacity(isHovered ? 1 : 0)
+            .scaleEffect(isHovered ? 1 : 0.94, anchor: .leading)
+            .allowsHitTesting(isHovered)
         }
-        .frame(width: 38, height: 38)
+        .frame(width: 124, height: 38, alignment: .leading)
         .contentShape(Rectangle())
+        .onHover(perform: onHoverChanged)
+        .animation(isDragging ? nil : .spring(response: 0.26, dampingFraction: 0.82), value: isHovered)
     }
 }
 
@@ -325,14 +472,14 @@ private struct RecordingOverlayView: View {
     let onStop: () -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 7) {
             Button(action: onCancel) {
                 ZStack {
                     Circle()
                         .fill(Color.white.opacity(0.20))
-                        .frame(width: 26, height: 26)
+                        .frame(width: 23, height: 23)
                     Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(.white.opacity(0.95))
                 }
             }
@@ -340,24 +487,24 @@ private struct RecordingOverlayView: View {
             .contentShape(Circle())
 
             VoiceSpectrumView(level: audioLevel)
-                .frame(maxWidth: .infinity, minHeight: 16, maxHeight: 16)
+                .frame(maxWidth: .infinity, minHeight: 14, maxHeight: 14)
 
             Button(action: onStop) {
                 ZStack {
                     Circle()
                         .fill(Color.red)
-                        .frame(width: 32, height: 32)
+                        .frame(width: 29, height: 29)
                     Image(systemName: "stop.fill")
-                        .font(.system(size: 10, weight: .black))
+                        .font(.system(size: 9, weight: .black))
                         .foregroundStyle(.white)
                 }
             }
             .buttonStyle(.plain)
             .contentShape(Circle())
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .frame(width: 228, height: 46)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 4)
+        .frame(width: 205, height: 41)
         .background(
             Capsule(style: .continuous)
                 .fill(Color.gray.opacity(0.38))
@@ -407,6 +554,6 @@ private struct VoiceSpectrumView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 16, maxHeight: 16)
+        .frame(maxWidth: .infinity, minHeight: 14, maxHeight: 14)
     }
 }

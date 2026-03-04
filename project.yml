@@ -30,10 +30,12 @@ targets:
       - path: DictateFlow/Resources
         excludes:
           - Info.plist
+          - DictateFlow.entitlements
         buildPhase: resources
     settings:
       base:
         PRODUCT_NAME: DictateFlow
+        CODE_SIGN_ENTITLEMENTS: DictateFlow/Resources/DictateFlow.entitlements
         OTHER_LDFLAGS:
           - "$(inherited)"
           - "-lsqlite3"

@@ -250,6 +250,17 @@ ollama serve
 tccutil reset Accessibility com.mesutoezciftci.DictateFlow
 ```
 
+### `Mikrofon wurde nicht freigegeben` / App erscheint nicht in Mikrofon-Liste
+
+- Für Hardened Runtime muss `com.apple.security.device.audio-input` gesetzt sein
+- Das Projekt enthält dafür `DictateFlow/Resources/DictateFlow.entitlements`
+- App aus Xcode mit aktiviertem Signing starten (nicht mit `CODE_SIGNING_ALLOWED=NO`)
+- Bei älteren/defekten TCC-Einträgen zurücksetzen:
+
+```bash
+tccutil reset Microphone com.mesutoezciftci.DictateFlow
+```
+
 ### `App-Icon wird nicht angezeigt`
 
 - Sicherstellen, dass das Projekt frisch aus `project.yml` generiert wurde:
@@ -280,4 +291,4 @@ xcodegen generate
 
 - Das Xcode-Projekt wird aus `project.yml` generiert.
 - Bei Änderungen an Source-Layout oder Build-Settings: `xcodegen generate` erneut ausführen.
-- Debug-Build ohne Code Signing ist möglich (`CODE_SIGNING_ALLOWED=NO`), kann aber Accessibility-Verhalten beeinflussen.
+- Debug-Build ohne Code Signing ist möglich (`CODE_SIGNING_ALLOWED=NO`), kann aber Accessibility- und Mikrofon-Berechtigungen beeinflussen.

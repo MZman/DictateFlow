@@ -1,0 +1,16 @@
+# Xcode
+DerivedData/
+.build/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+
+# Swift
+.swiftpm/
+.swift-module-cache/
+
+# macOS
+.DS_Store
+
+# Local build outputs
+.DerivedData/

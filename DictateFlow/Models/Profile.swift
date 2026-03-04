@@ -4,6 +4,7 @@ enum Profile: String, CaseIterable, Codable, Identifiable {
     case email
     case ticket
     case meetingNote
+    case reminders
 
     var id: String { rawValue }
 
@@ -15,6 +16,8 @@ enum Profile: String, CaseIterable, Codable, Identifiable {
             return "Ticket"
         case .meetingNote:
             return "Meetingnotiz"
+        case .reminders:
+            return "Erinnerungen niederschreiben"
         }
     }
 
@@ -26,6 +29,8 @@ enum Profile: String, CaseIterable, Codable, Identifiable {
             return "ticket"
         case .meetingNote:
             return "person.2"
+        case .reminders:
+            return "checklist"
         }
     }
 
@@ -37,6 +42,8 @@ enum Profile: String, CaseIterable, Codable, Identifiable {
             return "Erzeuge ein technisches Ticket mit Problem, Reproduktion, Auswirkung und nächstem Schritt."
         case .meetingNote:
             return "Erzeuge strukturierte Meetingnotizen mit Entscheidungen, Aufgaben und Verantwortlichkeiten."
+        case .reminders:
+            return "Erzeuge klare Erinnerungen mit kurzen, konkreten To-dos und optionalem Zeitbezug."
         }
     }
 }

@@ -126,10 +126,8 @@ final class OllamaService {
     }
 
     func refine(
-        text: String,
-        profile: Profile,
+        prompt: String,
         model: String,
-        basePrompt: String,
         binaryPath: String?
     ) async throws -> String {
         let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -149,17 +147,6 @@ final class OllamaService {
         }
 
         try await ensureServerRunning(binaryPath: resolvedBinaryPath)
-
-        let prompt = """
-\(basePrompt)
-
-Profilhinweis: \(profile.llmHint)
-
-Text:
-\(text)
-
-Gib ausschließlich den finalen, überarbeiteten Text zurück.
-"""
 
         let result = try await ProcessRunner.run(
             executablePath: resolvedBinaryPath,

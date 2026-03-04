@@ -16,8 +16,8 @@ final class AppViewModel: ObservableObject {
     @Published var isBusy = false
 
     @Published var selectedProfile: Profile = .email
-    @Published var enablePostProcessing: Bool
-    @Published var selectedWhisperModel: WhisperModel = .base
+    @Published var dictationMode: DictationMode
+    @Published var selectedSpeechModel: SpeechModelOption
 
     @Published var history: [Transcription] = []
     @Published var alertItem: AlertItem?
@@ -41,14 +41,14 @@ final class AppViewModel: ObservableObject {
 
     init(settings: SettingsStore) {
         self.settings = settings
-        enablePostProcessing = settings.enablePostProcessingByDefault
+        dictationMode = settings.dictationMode
+        selectedSpeechModel = settings.selectedSpeechModel
     }
 
     func bootstrapIfNeeded() async {
         guard !didBootstrap else { return }
         didBootstrap = true
 
-        applyRecommendedWhisperModel()
         await runStartupEnvironmentChecks()
         showSetupWizard = shouldPresentSetupWizard()
         configureHotkey()
@@ -136,11 +136,13 @@ final class AppViewModel: ObservableObject {
 
     func applyRecommendedWhisperModel() {
         let languageCode = Locale.current.language.languageCode?.identifier
-        selectedWhisperModel = WhisperModel.recommended(languageCode: languageCode, preferMaximumAccuracy: false)
+        let recommended = WhisperModel.recommended(languageCode: languageCode, preferMaximumAccuracy: false)
+        selectedSpeechModel = SpeechModelOption.from(whisperModel: recommended)
     }
 
     func applyMaximumAccuracyWhisperModel() {
-        selectedWhisperModel = WhisperModel.recommended(languageCode: nil, preferMaximumAccuracy: true)
+        let maxAccuracy = WhisperModel.recommended(languageCode: nil, preferMaximumAccuracy: true)
+        selectedSpeechModel = SpeechModelOption.from(whisperModel: maxAccuracy)
     }
 
     func openSetupWizard() {
@@ -172,30 +174,31 @@ final class AppViewModel: ObservableObject {
         do {
             let rawText = try await whisperService.transcribe(
                 audioURL: recordingURL,
-                model: selectedWhisperModel,
+                model: selectedSpeechModel.runtimeWhisperModel,
                 binaryPath: settings.whisperBinaryPath,
                 modelDirectory: settings.whisperModelDirectory
             )
 
-            var outputText = commandProcessor.apply(to: rawText)
+            var outputText = rawText
 
-            if enablePostProcessing {
+            if dictationMode == .aiPrompt {
                 setStatus(.postProcessing)
+
+                // Sprachbefehle wie "neuer Absatz" vor dem LLM auswerten.
+                let textForPrompt = commandProcessor.apply(to: rawText)
+                let renderedPrompt = settings.renderPrompt(
+                    text: textForPrompt,
+                    profileHint: selectedProfile.llmHint
+                )
+
                 do {
                     outputText = try await ollamaService.refine(
-                        text: outputText,
-                        profile: selectedProfile,
+                        prompt: renderedPrompt,
                         model: settings.ollamaModel,
-                        basePrompt: settings.defaultPrompt,
                         binaryPath: settings.ollamaBinaryPath
                     )
                 } catch {
-                    if case .binaryNotFound = error as? OllamaService.OllamaError {
-                        // Wiederholte Fehler vermeiden, wenn Ollama lokal nicht verfügbar ist.
-                        enablePostProcessing = false
-                        settings.enablePostProcessingByDefault = false
-                    }
-
+                    outputText = textForPrompt
                     let detail = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                     presentAlert(
                         title: "KI-Nachbearbeitung übersprungen",
@@ -213,13 +216,28 @@ final class AppViewModel: ObservableObject {
             try await historyStore.insert(transcription)
             history.insert(transcription, at: 0)
 
-            do {
-                try clipboardManager.copyAndPaste(text: outputText, promptForAccessibility: true)
-            } catch {
+            let hasAccessibilityPermission = await clipboardManager.requestAccessibilityPermissionAndWait(
+                prompt: true,
+                timeout: 6,
+                pollInterval: 0.4
+            )
+
+            if hasAccessibilityPermission {
+                do {
+                    try clipboardManager.copyAndPaste(text: outputText, promptForAccessibility: false)
+                } catch {
+                    clipboardManager.copy(text: outputText)
+                    let detail = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                    presentAlert(
+                        title: "Einfügen eingeschränkt",
+                        message: "\(detail)\n\nDas Transkript wurde in die Zwischenablage kopiert."
+                    )
+                }
+            } else {
                 clipboardManager.copy(text: outputText)
                 presentAlert(
                     title: "Einfügen eingeschränkt",
-                    message: "Das Transkript wurde in die Zwischenablage kopiert. Für automatisches Einfügen bitte Bedienungshilfen erlauben."
+                    message: "Das Transkript wurde in die Zwischenablage kopiert. Für automatisches Einfügen bitte Bedienungshilfen erlauben.\n\n\(clipboardManager.accessibilityTroubleshootingHint())"
                 )
             }
 
@@ -293,7 +311,7 @@ final class AppViewModel: ObservableObject {
         let hasWhisper = WhisperService.resolveWhisperBinaryPath(preferredPath: settings.whisperBinaryPath) != nil
         let hasOllama = OllamaService.resolveOllamaBinaryPath(preferredPath: settings.ollamaBinaryPath) != nil
         let hasMicrophonePermission = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
-        let hasAccessibilityPermission = clipboardManager.requestAccessibilityPermission(prompt: false)
+        let hasAccessibilityPermission = clipboardManager.hasAccessibilityPermission()
 
         let allReady = hasWhisper && hasOllama && hasMicrophonePermission && hasAccessibilityPermission
 

@@ -1,9 +1,28 @@
 import Foundation
 
 enum AppDefaults {
-    static let defaultPrompt = """
-Strukturiere den Text professionell, entferne Füllwörter, setze Satzzeichen, führe folgende Sprachbefehle aus: neuer Absatz, nummerierte Liste, Stichpunkte, formell.
+    static let promptTemplate = """
+Du bist ein lokaler Schreibassistent.
+
+Stilvorgabe:
+{{style_instruction}}
+
+Profilhinweis:
+{{profile_hint}}
+
+Aufgabe:
+- Formuliere den Inhalt im gewünschten Stil.
+- Entferne Füllwörter und Dopplungen.
+- Setze Satzzeichen korrekt.
+- Erhalte die inhaltliche Bedeutung.
+
+Transkript:
+{{text}}
+
+Gib ausschließlich den finalen Text zurück.
 """
+
+    static let customStyleInstruction = "Formuliere klar, verständlich und im gewünschten Ton."
 }
 
 @MainActor
@@ -22,8 +41,16 @@ final class SettingsStore: ObservableObject {
         static let whisperModelDirectory = "settings.whisperModelDirectory"
         static let ollamaBinaryPath = "settings.ollamaBinaryPath"
         static let ollamaModel = "settings.ollamaModel"
-        static let defaultPrompt = "settings.defaultPrompt"
-        static let enablePostProcessingByDefault = "settings.enablePostProcessingByDefault"
+        static let selectedSpeechModel = "settings.selectedSpeechModel"
+
+        static let dictationMode = "settings.dictationMode"
+        static let promptStyle = "settings.promptStyle"
+        static let customStyleInstruction = "settings.customStyleInstruction"
+        static let promptTemplate = "settings.promptTemplate"
+
+        // Legacy keys
+        static let legacyDefaultPrompt = "settings.defaultPrompt"
+        static let legacyEnablePostProcessingByDefault = "settings.enablePostProcessingByDefault"
     }
 
     private let defaults: UserDefaults
@@ -44,29 +71,59 @@ final class SettingsStore: ObservableObject {
         didSet { defaults.set(ollamaModel, forKey: Keys.ollamaModel) }
     }
 
-    @Published var defaultPrompt: String {
-        didSet { defaults.set(defaultPrompt, forKey: Keys.defaultPrompt) }
+    @Published var selectedSpeechModel: SpeechModelOption {
+        didSet { defaults.set(selectedSpeechModel.rawValue, forKey: Keys.selectedSpeechModel) }
     }
 
-    @Published var enablePostProcessingByDefault: Bool {
-        didSet { defaults.set(enablePostProcessingByDefault, forKey: Keys.enablePostProcessingByDefault) }
+    @Published var dictationMode: DictationMode {
+        didSet { defaults.set(dictationMode.rawValue, forKey: Keys.dictationMode) }
+    }
+
+    @Published var promptStyle: PromptStyle {
+        didSet { defaults.set(promptStyle.rawValue, forKey: Keys.promptStyle) }
+    }
+
+    @Published var customStyleInstruction: String {
+        didSet { defaults.set(customStyleInstruction, forKey: Keys.customStyleInstruction) }
+    }
+
+    @Published var promptTemplate: String {
+        didSet { defaults.set(promptTemplate, forKey: Keys.promptTemplate) }
     }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+
         whisperBinaryPath = defaults.string(forKey: Keys.whisperBinaryPath) ?? "/usr/local/bin/whisper-cli"
         whisperModelDirectory = defaults.string(forKey: Keys.whisperModelDirectory) ?? Self.recommendedUserModelDirectory()
         ollamaBinaryPath = defaults.string(forKey: Keys.ollamaBinaryPath) ?? "/opt/homebrew/bin/ollama"
         ollamaModel = defaults.string(forKey: Keys.ollamaModel) ?? "llama3.1"
-        defaultPrompt = defaults.string(forKey: Keys.defaultPrompt) ?? AppDefaults.defaultPrompt
-
-        if defaults.object(forKey: Keys.enablePostProcessingByDefault) == nil {
-            enablePostProcessingByDefault = true
+        if let storedSpeechModel = defaults.string(forKey: Keys.selectedSpeechModel),
+           let parsedSpeechModel = SpeechModelOption(rawValue: storedSpeechModel) {
+            selectedSpeechModel = parsedSpeechModel
         } else {
-            enablePostProcessingByDefault = defaults.bool(forKey: Keys.enablePostProcessingByDefault)
+            selectedSpeechModel = .whisperSmall
         }
 
-        // Beim Start versuchen wir automatisch den echten whisper.cpp CLI-Pfad zu finden.
+        if let storedMode = defaults.string(forKey: Keys.dictationMode), let parsedMode = DictationMode(rawValue: storedMode) {
+            dictationMode = parsedMode
+        } else if defaults.object(forKey: Keys.legacyEnablePostProcessingByDefault) != nil {
+            dictationMode = defaults.bool(forKey: Keys.legacyEnablePostProcessingByDefault) ? .aiPrompt : .plain
+        } else {
+            dictationMode = .aiPrompt
+        }
+
+        if let storedPromptStyle = defaults.string(forKey: Keys.promptStyle), let parsedStyle = PromptStyle(rawValue: storedPromptStyle) {
+            promptStyle = parsedStyle
+        } else {
+            promptStyle = .professional
+        }
+
+        customStyleInstruction = defaults.string(forKey: Keys.customStyleInstruction) ?? AppDefaults.customStyleInstruction
+
+        let legacyPrompt = defaults.string(forKey: Keys.legacyDefaultPrompt)
+        promptTemplate = defaults.string(forKey: Keys.promptTemplate) ?? legacyPrompt ?? AppDefaults.promptTemplate
+
         if let resolvedPath = WhisperService.resolveWhisperBinaryPath(preferredPath: whisperBinaryPath) {
             whisperBinaryPath = resolvedPath
         }
@@ -84,14 +141,45 @@ final class SettingsStore: ObservableObject {
             whisperModelDirectory = Self.recommendedUserModelDirectory()
         }
 
-        // Legacy-Migration: alter Systempfad ohne Schreibrechte -> auf User-Pfad umstellen.
         if whisperModelDirectory == "/usr/local/share/whisper", !Self.isDirectoryWritable(whisperModelDirectory) {
             whisperModelDirectory = Self.recommendedUserModelDirectory()
         }
     }
 
     func resetPromptToDefault() {
-        defaultPrompt = AppDefaults.defaultPrompt
+        promptTemplate = AppDefaults.promptTemplate
+    }
+
+    func resolvedPromptStyleInstruction() -> String {
+        if promptStyle == .custom {
+            let custom = customStyleInstruction.trimmingCharacters(in: .whitespacesAndNewlines)
+            return custom.isEmpty ? AppDefaults.customStyleInstruction : custom
+        }
+        return promptStyle.instruction
+    }
+
+    func renderPrompt(text: String, profileHint: String) -> String {
+        let styleInstruction = resolvedPromptStyleInstruction()
+        let template = promptTemplate
+
+        var rendered = template
+            .replacingOccurrences(of: "{{style_instruction}}", with: styleInstruction)
+            .replacingOccurrences(of: "{{profile_hint}}", with: profileHint)
+            .replacingOccurrences(of: "{{text}}", with: text)
+
+        if !template.contains("{{style_instruction}}") {
+            rendered += "\n\nStilvorgabe:\n\(styleInstruction)"
+        }
+
+        if !template.contains("{{profile_hint}}") {
+            rendered += "\n\nProfilhinweis:\n\(profileHint)"
+        }
+
+        if !template.contains("{{text}}") {
+            rendered += "\n\nTranskript:\n\(text)"
+        }
+
+        return rendered.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     @discardableResult

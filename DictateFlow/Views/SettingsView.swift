@@ -6,11 +6,8 @@ struct SettingsView: View {
     @EnvironmentObject private var appViewModel: AppViewModel
     @State private var binaryDetectFeedback = ""
     @State private var modelDetectFeedback = ""
-    @State private var modelDownloadFeedback = ""
     @State private var ollamaDetectFeedback = ""
-    @State private var isDownloadingModel = false
-
-    private let whisperService = WhisperService()
+    @State private var showModelSelectionWindow = false
 
     var body: some View {
         Form {
@@ -65,37 +62,6 @@ struct SettingsView: View {
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 10) {
-                        Button("Small herunterladen (DE/EU)") {
-                            downloadModel(.small)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(isDownloadingModel)
-
-                        Button("Medium herunterladen (JA/ZH)") {
-                            downloadModel(.medium)
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(isDownloadingModel)
-
-                        Button("Large v3 herunterladen") {
-                            downloadModel(.largeV3)
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(isDownloadingModel)
-                    }
-
-                    if isDownloadingModel {
-                        ProgressView("Modell wird geladen…")
-                    }
-
-                    if !modelDownloadFeedback.isEmpty {
-                        Text(modelDownloadFeedback)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
             }
 
             Section("Lokale KI (Ollama)") {
@@ -126,14 +92,61 @@ struct SettingsView: View {
 
                 TextField("Modellname", text: $settings.ollamaModel)
                     .textFieldStyle(.roundedBorder)
-
-                Toggle("KI standardmäßig aktivieren", isOn: $settings.enablePostProcessingByDefault)
             }
 
-            Section("Standardprompt") {
-                TextEditor(text: $settings.defaultPrompt)
+            Section("Diktiermodus") {
+                Picker("Standardmodus", selection: $settings.dictationMode) {
+                    ForEach(DictationMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+            }
+
+            Section("LMM-Auswahl") {
+                HStack {
+                    Text("Aktives Modell")
+                    Spacer()
+                    Text(settings.selectedSpeechModel.displayName)
+                        .foregroundStyle(.secondary)
+                }
+
+                Text(
+                    "Größe: \(settings.selectedSpeechModel.sizeLabel) | " +
+                    "Speed: \(settings.selectedSpeechModel.speedLabel) | " +
+                    "Genauigkeit: \(settings.selectedSpeechModel.accuracyLabel)"
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+                Button("LMM-Auswahlfenster öffnen") {
+                    showModelSelectionWindow = true
+                }
+                .buttonStyle(.borderedProminent)
+
+                Text("Nicht installierte Modelle können direkt im Auswahlfenster heruntergeladen werden.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("KI-Prompt") {
+                Picker("Prompt-Stil", selection: $settings.promptStyle) {
+                    ForEach(PromptStyle.allCases) { style in
+                        Text(style.displayName).tag(style)
+                    }
+                }
+
+                if settings.promptStyle == .custom {
+                    TextField("Benutzerdefinierter Stil", text: $settings.customStyleInstruction)
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                TextEditor(text: $settings.promptTemplate)
                     .font(.body.monospaced())
-                    .frame(minHeight: 170)
+                    .frame(minHeight: 210)
+
+                Text("Platzhalter: {{style_instruction}}, {{profile_hint}}, {{text}}")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
                 HStack {
                     Spacer()
@@ -152,6 +165,17 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .padding(16)
+        .onChange(of: settings.dictationMode) {
+            appViewModel.dictationMode = settings.dictationMode
+        }
+        .onChange(of: settings.selectedSpeechModel) {
+            appViewModel.selectedSpeechModel = settings.selectedSpeechModel
+        }
+        .sheet(isPresented: $showModelSelectionWindow) {
+            ModelSelectionView(selectedModel: $settings.selectedSpeechModel) {
+                showModelSelectionWindow = false
+            }
+        }
     }
 
     private func chooseWhisperBinary() {
@@ -187,28 +211,6 @@ struct SettingsView: View {
 
         if panel.runModal() == .OK, let url = panel.url {
             settings.ollamaBinaryPath = url.path
-        }
-    }
-
-    private func downloadModel(_ model: WhisperModel) {
-        Task {
-            isDownloadingModel = true
-            defer { isDownloadingModel = false }
-
-            let originalDirectory = settings.whisperModelDirectory
-            let targetDirectory = settings.ensureWritableModelDirectory()
-
-            do {
-                let outputURL = try await whisperService.downloadModel(model, to: targetDirectory)
-                settings.whisperModelDirectory = outputURL.deletingLastPathComponent().path
-                if originalDirectory != settings.whisperModelDirectory {
-                    modelDownloadFeedback = "Modell geladen: \(outputURL.lastPathComponent). Downloadpfad wurde auf einen beschreibbaren User-Ordner umgestellt."
-                } else {
-                    modelDownloadFeedback = "Modell geladen: \(outputURL.lastPathComponent)"
-                }
-            } catch {
-                modelDownloadFeedback = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-            }
         }
     }
 }

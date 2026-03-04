@@ -11,6 +11,9 @@ struct MainView: View {
     @EnvironmentObject private var settings: SettingsStore
 
     @State private var selectedTab: Tab = .recorder
+    @State private var availableRuntimeModels: Set<WhisperModel> = []
+
+    private let whisperService = WhisperService()
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -46,14 +49,24 @@ struct MainView: View {
         }
         .task {
             await viewModel.bootstrapIfNeeded()
+            refreshModelAvailability()
         }
         .sheet(isPresented: $viewModel.showSetupWizard) {
             SetupWizardView(settings: settings) { markedComplete in
                 viewModel.finishSetupWizard(markedComplete: markedComplete)
             }
         }
-        .onChange(of: viewModel.enablePostProcessing) {
-            settings.enablePostProcessingByDefault = viewModel.enablePostProcessing
+        .onChange(of: viewModel.selectedSpeechModel) {
+            settings.selectedSpeechModel = viewModel.selectedSpeechModel
+        }
+        .onChange(of: viewModel.dictationMode) {
+            settings.dictationMode = viewModel.dictationMode
+        }
+        .onChange(of: settings.whisperModelDirectory) {
+            refreshModelAvailability()
+        }
+        .onChange(of: settings.whisperBinaryPath) {
+            refreshModelAvailability()
         }
         .frame(minWidth: 980, minHeight: 640)
     }
@@ -96,35 +109,46 @@ struct MainView: View {
                     }
 
                     HStack(spacing: 14) {
-                        Picker("Profil", selection: $viewModel.selectedProfile) {
-                            ForEach(Profile.allCases) { profile in
-                                Text(profile.displayName).tag(profile)
+                        Picker("LMM-Modell", selection: $viewModel.selectedSpeechModel) {
+                            ForEach(SpeechModelOption.allCases) { model in
+                                Text(isSpeechModelAvailable(model) ? model.displayName : "\(model.displayName) (nicht installiert)")
+                                    .tag(model)
+                                    .disabled(!isSpeechModelAvailable(model))
                             }
                         }
-                        .frame(width: 220)
+                        .frame(width: 280)
 
-                        Picker("Whisper-Modell", selection: $viewModel.selectedWhisperModel) {
-                            ForEach(WhisperModel.allCases) { model in
-                                Text(model.displayName).tag(model)
+                        Picker("Modus", selection: $viewModel.dictationMode) {
+                            ForEach(DictationMode.allCases) { mode in
+                                Text(mode.displayName).tag(mode)
                             }
                         }
-                        .frame(width: 220)
-
-                        Toggle("KI-Nachbearbeitung (lokal)", isOn: $viewModel.enablePostProcessing)
-                            .toggleStyle(.switch)
+                        .frame(width: 280)
                     }
 
-                    HStack(spacing: 10) {
-                        Button("Empfohlenes Modell") {
-                            viewModel.applyRecommendedWhisperModel()
+                    Picker("Prompt-Stil", selection: $settings.promptStyle) {
+                        ForEach(PromptStyle.allCases) { style in
+                            Text(style.displayName).tag(style)
                         }
-                        .buttonStyle(.bordered)
-
-                        Button("Max. Genauigkeit (Large v3)") {
-                            viewModel.applyMaximumAccuracyWhisperModel()
-                        }
-                        .buttonStyle(.bordered)
                     }
+                    .frame(width: 360)
+
+                    if viewModel.dictationMode == .plain {
+                        Text("Prompt-Stil wird bei 'Reines Diktat' nicht angewendet.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Text(viewModel.dictationMode.descriptionText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Picker("Profil", selection: $viewModel.selectedProfile) {
+                        ForEach(Profile.allCases) { profile in
+                            Text(profile.displayName).tag(profile)
+                        }
+                    }
+                    .frame(width: 360)
                 }
                 .padding(8)
             }
@@ -169,5 +193,23 @@ struct MainView: View {
             Spacer(minLength: 0)
         }
         .padding(16)
+    }
+
+    private func isSpeechModelAvailable(_ option: SpeechModelOption) -> Bool {
+        availableRuntimeModels.contains(option.runtimeWhisperModel)
+    }
+
+    private func refreshModelAvailability() {
+        availableRuntimeModels = whisperService.availableModels(
+            modelDirectory: settings.whisperModelDirectory,
+            binaryPath: settings.whisperBinaryPath
+        )
+
+        guard !availableRuntimeModels.isEmpty else { return }
+
+        if !isSpeechModelAvailable(viewModel.selectedSpeechModel),
+           let firstAvailable = SpeechModelOption.allCases.first(where: { isSpeechModelAvailable($0) }) {
+            viewModel.selectedSpeechModel = firstAvailable
+        }
     }
 }

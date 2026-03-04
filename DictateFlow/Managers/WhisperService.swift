@@ -5,12 +5,15 @@ enum WhisperModel: String, CaseIterable, Identifiable {
     case base
     case small
     case medium
+    case largeV3Turbo = "large-v3-turbo"
     case largeV3 = "large-v3"
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
+        case .largeV3Turbo:
+            return "Large v3 Turbo"
         case .largeV3:
             return "Large v3"
         default:
@@ -282,6 +285,29 @@ final class WhisperService {
         return outputURL
     }
 
+    func availableModels(modelDirectory: String, binaryPath: String) -> Set<WhisperModel> {
+        let modelDirectories = Self.candidateModelDirectories(
+            preferredDirectory: modelDirectory,
+            binaryPath: binaryPath
+        )
+
+        var available = Set<WhisperModel>()
+        for model in WhisperModel.allCases {
+            for directory in modelDirectories {
+                if Self.modelURL(for: model, in: directory) != nil {
+                    available.insert(model)
+                    break
+                }
+            }
+        }
+
+        return available
+    }
+
+    func isModelAvailable(_ model: WhisperModel, modelDirectory: String, binaryPath: String) -> Bool {
+        availableModels(modelDirectory: modelDirectory, binaryPath: binaryPath).contains(model)
+    }
+
     private static func resolveModel(
         requestedModel: WhisperModel,
         candidateDirectories: [String]
@@ -292,7 +318,7 @@ final class WhisperService {
             }
         }
 
-        let preferredFallbackOrder: [WhisperModel] = [.small, .base, .medium, .tiny, .largeV3]
+        let preferredFallbackOrder: [WhisperModel] = [.small, .base, .medium, .largeV3Turbo, .tiny, .largeV3]
         var fallbackModels = preferredFallbackOrder.filter { $0 != requestedModel }
         fallbackModels += WhisperModel.allCases.filter { candidate in
             candidate != requestedModel && !fallbackModels.contains(candidate)

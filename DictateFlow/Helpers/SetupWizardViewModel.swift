@@ -145,7 +145,7 @@ final class SetupWizardViewModel: ObservableObject {
         }
 
         isMicrophoneGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
-        isAccessibilityGranted = clipboardManager.requestAccessibilityPermission(prompt: false)
+        isAccessibilityGranted = clipboardManager.hasAccessibilityPermission()
     }
 
     func installHomebrew() async {
@@ -237,10 +237,19 @@ final class SetupWizardViewModel: ObservableObject {
 
     func requestAccessibilityPermission() async {
         await runTask("Bedienungshilfe-Berechtigung wird angefragt…") {
-            let granted = clipboardManager.requestAccessibilityPermission(prompt: true)
+            let granted = await clipboardManager.requestAccessibilityPermissionAndWait(
+                prompt: true,
+                timeout: 25,
+                pollInterval: 0.5
+            )
             if !granted {
                 openSystemSettings(anchor: "Privacy_Accessibility")
-                throw SetupError.permissionDenied("Bedienungshilfe wurde nicht freigegeben.")
+                throw SetupError.permissionDenied(
+                    """
+                    Bedienungshilfe wurde nicht freigegeben.
+                    \(clipboardManager.accessibilityTroubleshootingHint())
+                    """
+                )
             }
             appendLog("Bedienungshilfe freigegeben.")
         }
